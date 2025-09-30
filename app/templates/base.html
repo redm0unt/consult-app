@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+        <title>ConsultApp</title>
+    </head>
+    <body>
+        <div id="page-wrapper">
+            <aside class="sidebar">
+                <div class="sidebar-top-group">
+                    <a href="#" class="sidebar-logo-link"><img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="Logo" class="sidebar-logo"></a>
+                    <ul class="sidebar-nav">
+                    {% for page in pages %}
+                        <li class="sidebar-item">
+                            <div></div>
+                            <a href="#" class="sidebar-item-link">{{ page }}</a>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                <div class="sidebar-bottom-group">
+                    <button type="button" class="sidebar-account-actions sidebar-item" aria-haspopup="true" aria-expanded="false">
+                        <span class="sidebar-account-actions-label">Пупкин В</span>
+                    </button>
+                    <ul class="sidebar-popup-menu" role="menu">
+                        <li class="sidebar-item">
+                            <a class="sidebar-item-link" href="#" role="menuitem">
+                                <!-- <i class="bi bi-person sidebar-popup-menu-item-icon" aria-hidden="true"></i> -->
+                                <span>Аккаунт</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a class="sidebar-item-link" href="#" role="menuitem">
+                                <!-- <i class="bi bi-box-arrow-right sidebar-popup-menu-item-icon" aria-hidden="true"></i> -->
+                                <span>Выход</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+            <main class="my-3">
+                <div class="container">
+                    {% block content %}
+                        <h1 style="margin: 0 auto;">Эта страница пуста</h1>
+                    {% endblock %}
+                </div>
+            </main>
+            {# <div class="alerts-area">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% for category, msg in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show m-0 rounded-0" role="alert">
+                            {{ msg }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endwith %}
+            </div> #}
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <script src="{{ url_for('static', filename='base_script.js') }}"></script>
+        {% block scripts %}
+
+        {% endblock %}
+    </body>
+</html>
