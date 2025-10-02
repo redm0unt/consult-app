@@ -7,6 +7,7 @@ Create Date: 2025-10-01 00:18:36.810134
 """
 from alembic import op
 import sqlalchemy as sa
+from werkzeug.security import generate_password_hash
 
 
 # revision identifiers, used by Alembic.
@@ -98,6 +99,96 @@ def upgrade():
     sa.ForeignKeyConstraint(['teacher_id'], ['teachers.teacher_id'], name=op.f('fk_slots_teacher_id_teachers'), onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('slot_id', name=op.f('pk_slots'))
     )
+
+    # Create 3 test users: admin, teacher, parent
+    schools_table = sa.table(
+        'schools',
+        sa.column('school_id', sa.Integer),
+        sa.column('school_name', sa.String),
+        sa.column('invite_code', sa.String),
+    )
+
+    op.bulk_insert(
+        schools_table,
+        [
+            {
+                'school_id': 1,
+                'school_name': 'Demo School',
+                'invite_code': 'WELCOME123',
+            }
+        ],
+    )
+
+    users_table = sa.table(
+        'users',
+        sa.column('user_id', sa.Integer),
+        sa.column('first_name', sa.String),
+        sa.column('middle_name', sa.String),
+        sa.column('last_name', sa.String),
+        sa.column('email', sa.String),
+        sa.column('password_hash', sa.String),
+        sa.column('role', sa.String),
+        sa.column('school_id', sa.Integer),
+    )
+
+    admin_password = generate_password_hash('admin')
+    teacher_password = generate_password_hash('teacher')
+    parent_password = generate_password_hash('parent')
+
+    op.bulk_insert(
+        users_table,
+        [
+            {
+                'user_id': 1,
+                'first_name': 'Анна',
+                'middle_name': 'Мельникова',
+                'last_name': 'Иванова',
+                'email': 'admin@admin.com',
+                'password_hash': admin_password,
+                'role': 'admin',
+                'school_id': 1,
+            },
+            {
+                'user_id': 2,
+                'first_name': 'Борис',
+                'middle_name': None,
+                'last_name': 'Петров',
+                'email': 'teacher@teacher.com',
+                'password_hash': teacher_password,
+                'role': 'teacher',
+                'school_id': 1,
+            },
+            {
+                'user_id': 3,
+                'first_name': 'Светлана',
+                'middle_name': None,
+                'last_name': 'Сидорова',
+                'email': 'parent@parent.com',
+                'password_hash': parent_password,
+                'role': 'parent',
+                'school_id': 1,
+            },
+        ],
+    )
+
+    admins_table = sa.table(
+        'admins',
+        sa.column('admin_id', sa.Integer),
+    )
+
+    teachers_table = sa.table(
+        'teachers',
+        sa.column('teacher_id', sa.Integer),
+    )
+
+    parents_table = sa.table(
+        'parents',
+        sa.column('parent_id', sa.Integer),
+    )
+
+    op.bulk_insert(admins_table, [{'admin_id': 1}])
+    op.bulk_insert(teachers_table, [{'teacher_id': 2}])
+    op.bulk_insert(parents_table, [{'parent_id': 3}])
     # ### end Alembic commands ###
 
 

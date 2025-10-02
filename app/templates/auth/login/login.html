@@ -1,0 +1,27 @@
+{% extends "auth/base_auth.html" %}
+
+{% block form %}
+    <form class="auth-form" method="POST" action="{% if next_url %}{{ url_for('auth.login', next=next_url) }}{% else %}{{ url_for('auth.login') }}{% endif %}">
+        <div class="auth-form__inputs">
+            <div class="input-fields-container">
+                <div class="input-fields-container__row">
+                    <label for="email" class="input-fields-container__row-label">Электронная почта</label>
+                    <input type="email" class="input-fields-container__row-input" id="email" name="email" 
+                           placeholder="Введите электронную почту" value="{{ form_data.get('email', request.form.get('email', '')) }}" autocomplete="email" required>
+                </div>
+                <div class="input-fields-container__row">
+                    <label for="password" class="input-fields-container__row-label">Пароль</label>
+                    <input type="password" class="input-fields-container__row-input" id="password" name="password" 
+                           placeholder="Введите пароль" autocomplete="current-password" required>
+                </div>
+            </div>
+            <div class="checkbox-field">
+                <input type="checkbox" class="checkbox-field__checkbox" id="remember_me" name="remember_me" {% if form_data.get('remember_me') or request.form.remember_me %}checked{% endif %}>
+                <label for="remember_me" class="checkbox-field__label">Запомнить меня</label>
+            </div>
+        </div>
+        <div class="auth-form__actions">
+            <button type="submit" class="button">Вход</button>
+        </div>
+    </form>
+{% endblock %}
