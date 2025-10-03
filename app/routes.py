@@ -41,7 +41,7 @@ def _generate_password(length: int = 12) -> str:
 bp = Blueprint('main', __name__)
 
 def get_pages():
-    return ['Главная', 'Мероприятия', 'Учителя', 'Здания']
+    return [('Главная', 'main.index'), ('Мероприятия', 'main.index'), ('Учителя', 'main.teachers'), ('Здания', 'main.index')]
 
 @bp.route('/')
 def index():
