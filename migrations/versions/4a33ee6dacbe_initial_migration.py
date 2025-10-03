@@ -7,6 +7,7 @@ Create Date: 2025-10-01 00:18:36.810134
 """
 from alembic import op
 import sqlalchemy as sa
+import secrets
 from werkzeug.security import generate_password_hash
 
 
@@ -114,7 +115,7 @@ def upgrade():
             {
                 'school_id': 1,
                 'school_name': 'Demo School',
-                'invite_code': 'WELCOME123',
+                'invite_code': secrets.token_hex(16),
             }
         ],
     )

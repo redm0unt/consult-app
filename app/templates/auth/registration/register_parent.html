@@ -1,0 +1,39 @@
+{% extends "auth/base_auth.html" %}
+
+{% block form %}
+    <form class="auth-form" method="POST" action="{{ invite_code and url_for('auth.register_parent', invite_code=invite_code) or url_for('auth.register_parent') }}">
+        <div class="auth-form__inputs">
+            <div class="input-fields-container">
+                {% if show_invite_input %}
+                    <div class="input-fields-container__row">
+                        <label for="invite_code" class="input-fields-container__row-label">Код приглашения</label>
+                        <input type="text" class="input-fields-container__row-input" id="invite_code" name="invite_code"
+                               placeholder="Введите код приглашения" value="{{ form_data.get('invite_code', request.form.get('invite_code', '')) }}" required>
+                    </div>
+                {% endif %}
+                <div class="input-fields-container__row">
+                    <label for="full_name" class="input-fields-container__row-label">ФИО</label>
+                    <input type="text" class="input-fields-container__row-input" id="full_name" name="full_name"
+                           placeholder="Введите ФИО" value="{{ form_data.get('full_name', request.form.get('full_name', '')) }}" required>
+                </div>
+                <div class="input-fields-container__row">
+                    <label for="email" class="input-fields-container__row-label">Электронная почта</label>
+                    <input type="email" class="input-fields-container__row-input" id="email" name="email"
+                           placeholder="Введите электронную почту" value="{{ form_data.get('email', request.form.get('email', '')) }}" autocomplete="email" required>
+                </div>
+                <div class="input-fields-container__row">
+                    <label for="password" class="input-fields-container__row-label">Пароль</label>
+                    <input type="password" class="input-fields-container__row-input" id="password" name="password"
+                           placeholder="Введите пароль" autocomplete="current-password" required>
+                </div>
+            </div>
+        </div>
+        <div class="auth-form__actions">
+            <button type="submit" class="button">Регистрация</button>
+            <div class="auth-form__alternative-action">
+                <span>Уже есть аккаунт?</span>
+                <a class="auth-form__alternative-action-link" href="{{ url_for('auth.login', next=request.args.get('next')) }}">Войти</a>
+            </div>
+        </div>
+    </form>
+{% endblock %}

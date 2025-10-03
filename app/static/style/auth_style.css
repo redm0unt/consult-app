@@ -39,6 +39,12 @@ img.auth-logo {
 }
 
 .auth-card__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 13px;
+}
+.auth-card__header-headings {
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -48,6 +54,15 @@ img.auth-logo {
     font-weight: 700;
     font-family: "Fira Sans", sans-serif;
     color: var(--color-deep-green_2);
+}
+.auth-card__description {
+    font-size: 20px;
+    font-weight: 900;
+    font-family: "Sofia Sans Condensed", sans-serif;
+    color: var(--color-gray_0);
+    text-align: center;
+
+    margin: 0;
 }
 
 .auth-form {
@@ -60,6 +75,26 @@ img.auth-logo {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+.auth-form__alternative-action {
+    font-size: 18px;
+    font-family: "Fira Sans", sans-serif;
+    color: var(--color-gray_0);
+    justify-content: center;
+
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+}
+.auth-form__alternative-action-link {
+    font-weight: 700;
+    color: var(--color-deep-green_2);
+    text-decoration: underline;
+    transition: 0.3s ease;
+}
+.auth-form__alternative-action-link:hover {
+    color: var(--color-deep-green_2-hover);
+    text-decoration: underline;
 }
 
 @media (max-width: 480px) {

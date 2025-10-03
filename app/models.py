@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 import enum
+from secrets import token_hex
 
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
@@ -36,13 +37,19 @@ class SlotStatus(enum.Enum):
 class School(Base):
     __tablename__ = 'schools'
 
+    INVITE_CODE_LENGTH = 32
+    INVITE_CODE_BYTES = INVITE_CODE_LENGTH // 2
+
     school_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    school_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    invite_code: Mapped[str] = mapped_column(String(45), nullable=False)
+    school_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    invite_code: Mapped[str] = mapped_column(String(INVITE_CODE_LENGTH), nullable=False, unique=True)
 
     buildings: Mapped[List["Building"]] = relationship("Building", back_populates="school", cascade="all, delete-orphan")
     events: Mapped[List["Event"]] = relationship("Event", back_populates="school", cascade="all, delete-orphan")
     users: Mapped[List["User"]] = relationship("User", back_populates="school", cascade="all, delete-orphan")
+
+    def assign_invite_code(self):
+        self.invite_code = token_hex(self.INVITE_CODE_BYTES)
 
     def __repr__(self):
         return f'<School {self.school_name}>'

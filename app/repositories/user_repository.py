@@ -83,11 +83,11 @@ class UserRepository(BaseRepository):
 
     def delete(self, user_id: int) -> bool:
         user = self.get_by_id(user_id)
-        if user:
-            self.db_connector.session.delete(user)
-            self.db_connector.session.commit()
-            return True
-        return False
+        if not user:
+            return False
+        self.db_connector.session.delete(user)
+        self.db_connector.session.commit()
+        return True
 
     def get_authorized_user(self, email: str, password: str) -> Optional[User]:
         user = self.get_by_email(email)
