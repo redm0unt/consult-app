@@ -220,6 +220,7 @@ class BuildingBooking(Base):
     teacher_id: Mapped[int] = mapped_column(ForeignKey('teachers.teacher_id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     building_id: Mapped[int] = mapped_column(ForeignKey('buildings.building_id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     event_id: Mapped[int] = mapped_column(ForeignKey('events.event_id', ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
+    classroom: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=sqlalchemy.sql.func.now(), nullable=False)
 
     teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="building_bookings")

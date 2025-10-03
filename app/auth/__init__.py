@@ -3,15 +3,9 @@ from flask_login import LoginManager, current_user, login_user, logout_user, log
 from functools import wraps
 # from .checkers import check_password
 
-# from .policies.users_policy import UsersPolicy
-# from .policies.visit_logs_policy import VisitLogsPolicy
+from .policies import user_allowed
 
 from ..repositories import get_repository
-
-# policies = {
-#     'users': UsersPolicy,
-#     'visit_logs': VisitLogsPolicy
-# }
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -43,18 +37,13 @@ def logout():
     return redirect(url_for('auth.login'))
 
 # def user_allowed(resource, action, **kwargs):
-#     policy = policies[resource](**kwargs)
-#     return getattr(policy, action, lambda: False)()
-
-# def check_rights(resource, action):
-#     def decorator(function):
-#         @wraps(function)
-#         def wrapper(*args, **kwargs):
-#             if not user_allowed(resource, action, **kwargs):
-#                 flash('У вас недостаточно прав для доступа к данной странице.', 'warning')
-#                 return redirect(url_for('users.index'))
-#             return function(*args, **kwargs)
-#         return wrapper
-#     return decorator
-
-
+def check_rights(resource, action, redirect_endpoint='main.index'):
+    def decorator(function):
+        @wraps(function)
+        def wrapper(*args, **kwargs):
+            if not user_allowed(resource, action, **kwargs):
+                flash('У вас недостаточно прав для доступа к данной странице.', 'warning')
+                return redirect(url_for(redirect_endpoint))
+            return function(*args, **kwargs)
+        return wrapper
+    return decorator

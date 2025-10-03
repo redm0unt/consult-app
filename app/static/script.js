@@ -63,4 +63,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
         window.setTimeout(hideAlert, 10000);
     });
+
+    const copyButtons = document.querySelectorAll('[data-copy-text]');
+    copyButtons.forEach((button) => {
+        const originalTitle = button.getAttribute('aria-label') || '';
+
+        button.addEventListener('click', async () => {
+            const text = button.dataset.copyText;
+            if (!text) {
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const tempInput = document.createElement('input');
+                    tempInput.value = text;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                }
+
+                button.classList.add('is-copied');
+                button.setAttribute('aria-label', 'Скопировано');
+                window.setTimeout(() => {
+                    button.classList.remove('is-copied');
+                    button.setAttribute('aria-label', originalTitle);
+                }, 2000);
+            } catch (error) {
+                console.error('Не удалось скопировать ссылку', error);
+            }
+        });
+    });
 });
