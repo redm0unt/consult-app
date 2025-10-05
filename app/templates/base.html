@@ -16,7 +16,7 @@
         <div id="page-wrapper">
             <aside class="sidebar">
                 <div class="sidebar-top-group">
-                    <a href="#" class="sidebar-logo-link"><img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="Logo" class="sidebar-logo"></a>
+                    <a href="{{ url_for('main.index') }}" class="sidebar-logo-link"><img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="Logo" class="sidebar-logo"></a>
                     <ul class="sidebar-nav">
                         {% for page, endpoint in pages %}
                             <li class="sidebar-item current-page">
@@ -65,7 +65,7 @@
                     </ul>
                 </div>
             </aside>
-            <main class="content">
+            <main class="main">
                 <div class="alerts-area center-alerts">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% for category, msg in messages %}
@@ -76,12 +76,14 @@
                         {% endfor %}
                     {% endwith %}
                 </div>
-                {% block content %}
-                    <div class="content-empty-state" role="note">
-                        <h1 class="content-empty-state__title">Эта страница пуста</h1>
-                        <a class="content-empty-state__link" href="{{ url_for('main.index') }}">Вернуться на главную</a>
-                    </div>
-                {% endblock %}
+                <div class="content">
+                    {% block content %}
+                        <div class="content-empty-state" role="note">
+                            <h1 class="content-empty-state__title">Эта страница пуста</h1>
+                            <a class="content-empty-state__link" href="{{ url_for('main.index') }}">Вернуться на главную</a>
+                        </div>
+                    {% endblock %}
+                </div>
             </main>
         </div>
 

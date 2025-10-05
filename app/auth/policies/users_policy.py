@@ -1,12 +1,11 @@
+from typing import Any
+
 from flask_login import current_user
 
-from . import BasePolicy, authentication_required
+from .base_policy import BasePolicy, authentication_required
 
-
-class UsersPolicy(BasePolicy):
-    """Generic permissions for working with user records."""
-
-    def __init__(self, **kwargs):
+class TeachersPolicy(BasePolicy):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.target_user_id = self._normalize_id(kwargs.get('user_id'))
 

@@ -1,19 +1,26 @@
-import os
+from typing import Any, Mapping, MutableMapping, Optional, Tuple
+
 from flask import Flask
 from flask_migrate import Migrate
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
+from .auth import bp as auth_bp, init_login_manager
 from .models import db
 from .routes import bp as main_bp
-from .auth import bp as auth_bp, init_login_manager
 
-def handle_sqlalchemy_error(err):
-    error_msg = ('Возникла ошибка при подключении к базе данных.'
-                 'Повторите попытку позже.')
+
+def handle_sqlalchemy_error(err: SQLAlchemyError) -> Tuple[str, int]:
+    error_msg = (
+        'Возникла ошибка при подключении к базе данных.'
+        'Повторите попытку позже.'
+    )
     return f'{error_msg} (Подробнее: {err})', 500
 
-def create_app(test_config=None):
+
+def create_app(
+    test_config: Optional[Mapping[str, Any] | MutableMapping[str, Any]] = None,
+) -> Flask:
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_pyfile('config.py')
 
@@ -21,7 +28,7 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
 
     init_login_manager(app)
 

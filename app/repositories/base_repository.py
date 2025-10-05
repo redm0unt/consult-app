@@ -1,27 +1,66 @@
-from flask_sqlalchemy import SQLAlchemy, query
-from typing import Optional, TypeVar, Type, List
+from typing import Any, Generic, Optional, Sequence, Type, TypeVar
 
-T = TypeVar('T')
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Select, select
 
-class BaseRepository:
-    model: Type[T] = None
-    order_by: tuple = None
-    
-    def __init__(self, db_connector: SQLAlchemy):
-        self.db_connector = db_connector
+ModelType = TypeVar("ModelType")
 
-    def _get_all_query(self, order_by = None, query = None, **kwargs) -> query:
-        if query is None:
-            query = self.db_connector.select(self.model).filter_by(**kwargs)
-            if order_by:
-                query = query.order_by(*order_by)
-        return query
 
-    def _get_one(self, **kwargs) -> Optional[T]:
-        return self.db_connector.session.execute(self._get_all_query(order_by=None, **kwargs)).scalar_one_or_none()
+class BaseRepository(Generic[ModelType]):
+    model: Optional[Type[ModelType]] = None
+    default_order_by: Optional[Sequence[Any]] = None
 
-    def _get_all(self, order_by = None, **kwargs) -> List[Optional[T]]:
-        return self.db_connector.session.execute(self._get_all_query(order_by=order_by, **kwargs)).scalars().all()
+    def __init__(self, db: SQLAlchemy) -> None:
+        self._db = db
+
+    @property
+    def session(self):
+        return self._db.session
+
+    def _build_select(
+        self,
+        *,
+        filters: Optional[dict[str, Any]] = None,
+        order_by: Optional[Sequence[Any]] = None,
+    ) -> Select:
+        if self.model is None:
+            raise NotImplementedError("Repository model is not configured")
+
+        stmt = select(self.model)
+
+        if filters:
+            stmt = stmt.filter_by(**filters)
+
+        if order_by is None:
+            order_by = self.default_order_by
+
+        if order_by:
+            stmt = stmt.order_by(*order_by)
+
+        return stmt
+
+    def _get_one(self, **filters: Any) -> Optional[ModelType]:
+        stmt = self._build_select(filters=filters)
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def _get_all(
+        self,
+        *,
+        filters: Optional[dict[str, Any]] = None,
+        order_by: Optional[Sequence[Any]] = None,
+    ) -> list[ModelType]:
+        stmt = self._build_select(filters=filters, order_by=order_by)
+        result = self.session.execute(stmt)
+        return list(result.scalars())
+
+    def add(self, instance: ModelType) -> None:
+        self.session.add(instance)
+
+    def commit(self) -> None:
+        self.session.commit()
 
     def rollback(self) -> None:
-        self.db_connector.session.rollback()
+        self.session.rollback()
+
+
+__all__ = ["BaseRepository"]

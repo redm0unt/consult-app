@@ -1,14 +1,16 @@
-from . import bp
-
 from typing import Dict, Optional
+
 from flask import flash, redirect, render_template, request, url_for
+from flask.typing import ResponseReturnValue
 from flask_login import login_user
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from ..repositories import get_repository
+from ..models import School, User
+from ..repositories import SchoolRepository, UserRepository, get_repository
+from . import bp
 
-user_repository = get_repository('users')
-school_repository = get_repository('schools')
+user_repository: UserRepository = get_repository('users')
+school_repository: SchoolRepository = get_repository('schools')
 
 
 def _parse_full_name(full_name: str) -> tuple[str, str, Optional[str]]:
@@ -25,7 +27,10 @@ def _parse_full_name(full_name: str) -> tuple[str, str, Optional[str]]:
     last_name, first_name, middle_name = parts
     return first_name, last_name, middle_name
 
-def _render_admin_form(form_data: Optional[Dict[str, str]] = None, status: int = 200):
+def _render_admin_form(
+    form_data: Optional[Dict[str, str]] = None,
+    status: int = 200,
+) -> ResponseReturnValue:
     return (
         render_template(
             'auth/registration/register_admin.html',
@@ -44,7 +49,7 @@ def _render_parent_form(
     show_invite_input: bool = True,
     school_name: Optional[str] = None,
     invite_code: Optional[str] = None,
-):
+) -> ResponseReturnValue:
     form_data = form_data or {}
     if invite_code is not None:
         form_data.setdefault('invite_code', invite_code)
@@ -64,10 +69,10 @@ def _render_parent_form(
     )
 
 
-@bp.route('/register/admins', methods=['GET', 'POST'])
-def register_admin():
+@bp.route('/register_admins', methods=['GET', 'POST'])
+def register_admin() -> ResponseReturnValue:
     if request.method == 'POST':
-        form_data = {
+        form_data: Dict[str, str] = {
             'full_name': request.form.get('full_name', '').strip(),
             'school_name': request.form.get('school_name', '').strip(),
             'email': request.form.get('email', '').strip(),
@@ -85,7 +90,7 @@ def register_admin():
             return _render_admin_form(form_data, 400)
 
         try:
-            school = school_repository.create(school_name=form_data['school_name'])
+            school: School = school_repository.create(school_name=form_data['school_name'])
         except IntegrityError:
             school_repository.rollback()
             flash('Школа с таким названием уже существует', 'warning')
@@ -96,7 +101,7 @@ def register_admin():
             return _render_admin_form(form_data, 500)
 
         try:
-            user = user_repository.create(
+            user: User = user_repository.create(
                 email=form_data['email'],
                 password=password,
                 first_name=first_name,
@@ -122,10 +127,10 @@ def register_admin():
 
     return _render_admin_form()
 
-@bp.route('/register/parents', methods=['GET', 'POST'])
-def register_parent():
+@bp.route('register_parents', methods=['GET', 'POST'])
+def register_parent() -> ResponseReturnValue:
     invite_code_param = request.args.get('invite_code', '').strip()
-    initial_school = (
+    initial_school: Optional[School] = (
         school_repository.get_by_invite_code(invite_code=invite_code_param)
         if invite_code_param
         else None
@@ -134,7 +139,7 @@ def register_parent():
     show_invite_input = not bool(school_name)
 
     if request.method == 'POST':
-        form_data = {
+        form_data: Dict[str, str] = {
             'full_name': request.form.get('full_name', '').strip(),
             'email': request.form.get('email', '').strip(),
         }
@@ -179,7 +184,7 @@ def register_parent():
             )
 
         try:
-            user = user_repository.create(
+            user: User = user_repository.create(
                 email=form_data['email'],
                 password=password,
                 first_name=first_name,

@@ -2,14 +2,6 @@
     --teachers-card-shadow: 0 12px 30px rgba(var(--color-shadow-rgb), 0.08);
 }
 
-.teachers-page {
-    max-width: 1160px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-}
-
 .teachers-header {
     display: flex;
     flex-direction: column;

@@ -1,15 +1,18 @@
-from . import bp
+from typing import Any, Dict, Optional
 
-from flask import render_template, redirect, url_for, flash, request, session
+from flask import flash, redirect, render_template, request, session, url_for
+from flask.typing import ResponseReturnValue
 from flask_login import login_user
 
-from ..repositories import get_repository
+from ..repositories import UserRepository, get_repository
+from . import bp
 
-user_repository = get_repository('users')
+user_repository: UserRepository = get_repository('users')
+
 
 @bp.route('/login', methods=['GET', 'POST'])
-def login():
-    next_url = request.args.get('next')
+def login() -> ResponseReturnValue:
+    next_url: Optional[str] = request.args.get('next')
 
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip()
@@ -20,7 +23,7 @@ def login():
             user = user_repository.get_authorized_user(email, password)
             if user is not None:
                 login_user(user, remember=remember_me)
-                flash('Вы успешно аутентифицированы', 'success')
+                flash('Вы успешно аутентифицированы!', 'success')
                 return redirect(next_url or url_for('main.index'))
 
         flash('Невозможно аутентифицироваться с указанными логином и паролем', 'danger')
@@ -28,12 +31,12 @@ def login():
             'email': email,
             'remember_me': remember_me,
         }
-        redirect_kwargs = {}
+        redirect_kwargs: Dict[str, Any] = {}
         if next_url:
             redirect_kwargs['next'] = next_url
         return redirect(url_for('auth.login', **redirect_kwargs))
 
-    form_data = session.pop('login_form_data', None) or {}
+    form_data: Dict[str, Any] = session.pop('login_form_data', None) or {}
 
     return render_template(
         'auth/login/login.html',

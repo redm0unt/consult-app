@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/teachers.css') }}">
+{% endblock %}
+
+
+{% block content %}
+<header class="teachers-header">
+    <h1 class="teachers-title h1">Учителя</h1>
+    <p class="teachers-subtitle">Управление учительским составом</p>
+</header>
+
+<div class="teachers-controls" role="search">
+    <form class="teachers-search-form" method="get" action="{{ url_for('main.teachers') }}">
+        <div class="teachers-search">
+            <input type="search"
+                    name="q"
+                    class="teachers-search__input"
+                    placeholder="Поиск учителя"
+                    value="{{ search_query }}"
+                    aria-label="Поиск учителя">
+            <button type="button" class="teachers-search__clear" data-search-clear aria-label="Очистить поиск"{% if not search_query %} hidden{% endif %}>
+                <span class="visually-hidden">Очистить</span>
+            </button>
+        </div>
+    </form>
+    <div class="teachers-controls__buttons">
+        {% if can_manage_users %}
+        <form class="teachers-import" data-teachers-import method="post" enctype="multipart/form-data" action="{{ url_for('main.teachers_import') }}">
+            <input type="file" name="file" accept=".xlsx" hidden data-teachers-import-input>
+            <button type="button" class="button button--outline" data-teachers-import-trigger>
+                <span class="button__icon" aria-hidden="true">📄</span>
+                Загрузить учителей
+            </button>
+        </form>
+        {% else %}
+        <button type="button" class="button button--outline" disabled>
+            <span class="button__icon" aria-hidden="true">📄</span>
+            Загрузить учителей
+        </button>
+        {% endif %}
+        {% if can_manage_users %}
+        <button type="button" class="button teachers-add" data-teachers-add>
+            <span class="button__icon" aria-hidden="true">＋</span>
+            Добавить
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+{% if teachers %}
+<section class="teachers-grid" aria-label="Список учителей">
+    {% for teacher in teachers %}
+    <article class="teacher-card">
+        <div class="teacher-card__header">
+            <span class="teacher-card__label">ФИО</span>
+            {% if can_manage_users %}
+            <div class="teacher-card__menu" data-dropdown>
+                <button type="button" class="teacher-card__menu-toggle" data-dropdown-toggle aria-haspopup="true" aria-expanded="false">
+                    <span class="visually-hidden">Действия с учителем</span>
+                </button>
+                <div class="teacher-card__menu-list" role="menu">
+                    <button type="button"
+                            class="teacher-card__menu-item"
+                            role="menuitem"
+                            data-action="edit"
+                            data-teacher-id="{{ teacher.user_id }}"
+                            data-teacher-full-name="{{ teacher.full_name }}"
+                            data-teacher-email="{{ teacher.email }}">
+                        Править
+                    </button>
+                    <button type="button"
+                            class="teacher-card__menu-item teacher-card__menu-item--danger"
+                            role="menuitem"
+                            data-action="delete"
+                            data-teacher-id="{{ teacher.user_id }}"
+                            data-teacher-name="{{ teacher.full_name }}">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <h2 class="teacher-card__name">{{ teacher.full_name }}</h2>
+        <div class="teacher-card__info">
+            <span class="teacher-card__label">Электронная почта</span>
+            <a href="mailto:{{ teacher.email }}" class="teacher-card__email">{{ teacher.email }}</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% else %}
+<section class="teachers-empty" role="status">
+    <p>Список учителей пуст. Добавьте первого преподавателя для вашей школы.</p>
+</section>
+{% endif %}
+
+{% if can_manage_users %}
+{% set teacher_form = teacher_form_data or {} %}
+<div class="teachers-modal"
+     data-teachers-modal
+     {% if show_teacher_form %}data-open="true"{% endif %}
+     data-mode="{{ teacher_form_mode or 'create' }}"
+     {% if teacher_form_teacher_id %}data-teacher-id="{{ teacher_form_teacher_id }}"{% endif %}>
+    <div class="teachers-modal__overlay" data-teachers-close></div>
+    <div class="teachers-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="teacher-modal-title">
+        <header class="teachers-modal__header">
+            <h2 id="teacher-modal-title">
+                {% if teacher_form_mode == 'update' %}
+                Редактирование учителя
+                {% else %}
+                Добавление учителя
+                {% endif %}
+            </h2>
+            <button type="button" class="teachers-modal__close" data-teachers-close aria-label="Закрыть форму">
+                <span aria-hidden="true">×</span>
+            </button>
+        </header>
+        <form method="post" class="teachers-modal__form" novalidate>
+            <input type="hidden" name="form_type" value="{{ teacher_form_mode or 'create' }}">
+            <input type="hidden" name="teacher_id" value="{{ teacher_form_teacher_id or '' }}">
+            <div class="teachers-modal__field">
+                <label class="teachers-modal__label" for="teacher_full_name">ФИО</label>
+                <input id="teacher_full_name" name="full_name" type="text" class="teachers-modal__input" placeholder="Фамилия Имя Отчество" value="{{ teacher_form.get('full_name', '') }}" required>
+            </div>
+            <div class="teachers-modal__field">
+                <label class="teachers-modal__label" for="teacher_email">Электронная почта</label>
+                <input id="teacher_email" name="email" type="email" class="teachers-modal__input" placeholder="teacher@example.com" value="{{ teacher_form.get('email', '') }}" required>
+            </div>
+            <div class="teachers-modal__field" data-password-field{% if teacher_form_mode == 'update' %} hidden{% endif %}>
+                <label class="teachers-modal__label" for="teacher_password">Временный пароль</label>
+                <input id="teacher_password" name="password" type="password" class="teachers-modal__input" placeholder="Минимум 8 символов" minlength="8" required>
+            </div>
+            <footer class="teachers-modal__footer">
+                <button type="button" class="button button--outline" data-teachers-close>Отмена</button>
+                <button type="submit" class="button">Сохранить</button>
+            </footer>
+        </form>
+    </div>
+</div>
+<form method="post" class="teachers-delete-form" data-teachers-delete-form>
+    <input type="hidden" name="form_type" value="delete">
+    <input type="hidden" name="teacher_id" value="">
+</form>
+{% endif %}
+{% endblock %}
+
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='teachers.js') }}" defer></script>
+{% endblock %}

@@ -1,12 +1,12 @@
+from typing import Any
+
 from flask_login import current_user
 
-from . import BasePolicy, authentication_required
+from .base_policy import BasePolicy, authentication_required
 
 
 class SchoolsPolicy(BasePolicy):
-    """Permissions for school level operations."""
-
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.school_id = kwargs.get('school_id')
 

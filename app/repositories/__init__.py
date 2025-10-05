@@ -1,16 +1,31 @@
+from typing import Dict, Type
+
 from ..models import db
 
-from .user_repository import UserRepository
+from .base_repository import BaseRepository
 from .school_repository import SchoolRepository
+from .user_repository import UserRepository
 
-from typing import Union
+RepositoryMap = Dict[str, Type[BaseRepository]]
 
-REPOSITORIES = {
-    'users': UserRepository,
-    'schools': SchoolRepository,
+_REPOSITORIES: RepositoryMap = {
+    "users": UserRepository,
+    "schools": SchoolRepository,
 }
 
-def get_repository(resource: str) -> Union[UserRepository, SchoolRepository]:
-    if resource not in REPOSITORIES:
-        raise ValueError(f"Repository '{resource}' not found. Available: {list(REPOSITORIES.keys())}")
-    return REPOSITORIES[resource](db)
+
+def get_repository(resource: str) -> BaseRepository:
+    try:
+        repository_class: Type[BaseRepository] = _REPOSITORIES[resource]
+    except KeyError as exc:
+        available = ", ".join(sorted(_REPOSITORIES))
+        raise ValueError(f"Repository '{resource}' not found. Available: {available}") from exc
+    return repository_class(db)
+
+
+__all__ = [
+    "BaseRepository",
+    "SchoolRepository",
+    "UserRepository",
+    "get_repository",
+]
