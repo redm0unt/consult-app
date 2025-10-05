@@ -40,7 +40,7 @@
             </div>
         </div>
 
-        <div class="alerts-area">
+    <div class="alerts-area" data-alert-close-icon="{{ url_for('static', filename='img/close_icon.png') }}">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% for category, msg in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible" role="alert">
@@ -51,7 +51,7 @@
             {% endwith %}
         </div>
 
-        <script src="{{ url_for('static', filename='script.js') }}"></script>
+        <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
         {% block scripts %}{% endblock %}
     </body>
 </html>

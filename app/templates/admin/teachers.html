@@ -130,5 +130,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='teachers.js') }}" defer></script>
+<script type="module" src="{{ url_for('static', filename='js/pages/teachers/index.js') }}"></script>
 {% endblock %}
