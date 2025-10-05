@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "elements/general_elements.html" import render_empty_state_block %}
+{% from "elements/management_macros.html" import management_controls, management_card, management_modal, management_delete_form, management_add_button %}
+
+{% set page_description = "Управление корпусами школы" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/admin/management.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/admin/buildings.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main">
+<section class="section" aria-label="Управление зданиями школы">
+    {% call management_controls('Поиск здания') %}
+        {% if can_manage_buildings %}
+        {{ management_add_button('data-buildings-add', 'Добавить') }}
+        {% endif %}
+    {% endcall %}
+
+    {% if buildings %}
+    <section class="management-grid buildings-grid" aria-label="Список зданий">
+        {% for building in buildings %}
+        {% set building_menu_config = None %}
+        {% if can_manage_buildings %}
+            {% set building_menu_config = {
+                'aria_label': 'Действия со зданием',
+                'items': [
+                    {
+                        'action': 'edit',
+                        'label': 'Править',
+                        'attrs': {
+                            'data-building-id': building.building_id,
+                            'data-building-name': building.name,
+                            'data-building-address': building.address
+                        }
+                    },
+                    {
+                        'action': 'delete',
+                        'label': 'Удалить',
+                        'danger': True,
+                        'attrs': {
+                            'data-building-id': building.building_id,
+                            'data-building-name': building.name
+                        }
+                    }
+                ]
+            } %}
+        {% endif %}
+        {% call management_card('building', 'Название', building.name, 'Адрес', building_menu_config) %}
+            <address class="building-card__address">{{ building.address }}</address>
+        {% endcall %}
+        {% endfor %}
+    </section>
+    {% else %}
+    {{ render_empty_state_block('Здания не найдены. Добавьте первый корпус для вашей школы') }}
+    {% endif %}
+
+    {% if can_manage_buildings %}
+    {% set building_form = building_form_data or {} %}
+    {% set building_modal_config = {
+        'prefix': 'buildings',
+        'show': show_building_form,
+        'mode': building_form_mode or 'create',
+        'dataset_id_attr': 'building-id',
+        'dataset_id_value': building_form_building_id,
+        'title_create': 'Добавление здания',
+        'title_update': 'Редактирование здания',
+        'submit_create': 'Сохранить',
+        'submit_update': 'Сохранить изменения',
+        'close_label': 'Закрыть форму',
+        'hidden_fields': [
+            {'name': 'form_type', 'value': building_form_mode or 'create'},
+            {'name': 'building_id', 'value': building_form_building_id or ''}
+        ]
+    } %}
+    {% call management_modal(building_modal_config) %}
+        <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="building_name">Название</label>
+            <input id="building_name" name="name" type="text" class="input-fields-container__row-input" placeholder="Например, Главный корпус" value="{{ building_form.get('name', '') }}" maxlength="70" required>
+        </div>
+        <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="building_address">Адрес</label>
+            <textarea id="building_address" name="address" class="input-fields-container__row-input input-fields-container__row-input--textarea" rows="3" placeholder="Город, улица, дом" maxlength="90" required>{{ building_form.get('address', '') }}</textarea>
+        </div>
+    {% endcall %}
+    {{ management_delete_form('buildings', 'building_id') }}
+    {% endif %}
+</section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if can_manage_buildings %}
+<script type="module" src="{{ url_for('static', filename='js/pages/buildings/index.js') }}"></script>
+{% endif %}
+{% endblock %}

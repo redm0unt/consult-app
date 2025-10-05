@@ -1,0 +1,13 @@
+.building-card__address {
+    font-style: normal;
+    color: var(--color-dark-gray);
+    font-size: 20px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.input-fields-container__row-input--textarea {
+    display: block;
+    resize: vertical;
+    min-height: 96px;
+}

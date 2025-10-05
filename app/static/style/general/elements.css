@@ -45,6 +45,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
 }
 .section-controls__buttons {
@@ -227,6 +228,8 @@
 .search {
     position: relative;
     flex: 1 1 320px;
+    max-width: 632px;
+    max-height: max-content;
 }
 
 .search__input {

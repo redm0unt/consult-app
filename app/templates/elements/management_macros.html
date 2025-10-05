@@ -1,0 +1,145 @@
+{#
+    Shared admin management macros for consistent section controls, entity cards,
+    modals, and delete forms across resource pages (teachers, buildings, etc.).
+#}
+{% import "elements/general_elements.html" as general_elements %}
+
+{% macro management_controls(search_placeholder) %}
+<div class="section-header">
+    <div class="section-controls">
+        {{ general_elements.render_search(search_placeholder) }}
+        {% if caller %}
+            {% set buttons_markup = caller() %}
+            {% if buttons_markup|trim %}
+            <div class="section-controls__buttons">
+                {{ buttons_markup | safe }}
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro management_card_menu(base, accessible_label, items) %}
+{% if items %}
+<div class="management-card__menu {{ base }}-card__menu" data-dropdown>
+    <button type="button" class="management-card__menu-toggle {{ base }}-card__menu-toggle" data-dropdown-toggle aria-haspopup="true" aria-expanded="false">
+        <span class="visually-hidden">{{ accessible_label }}</span>
+    </button>
+    <div class="management-card__menu-list {{ base }}-card__menu-list" role="menu">
+        {% for item in items %}
+        {% set danger = item.get('danger') %}
+        <button type="{{ item.get('type', 'button') }}"
+                class="management-card__menu-item {{ base }}-card__menu-item{% if danger %} management-card__menu-item--danger {{ base }}-card__menu-item--danger{% endif %}"
+                role="menuitem"
+                data-action="{{ item.get('action', '') }}"
+                {% for attr_name, attr_value in item.get('attrs', {}).items() if attr_name %}
+                    {{ attr_name }}="{{ attr_value }}"
+                {% endfor %}>
+            {{ item.get('label', '') }}
+        </button>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro management_card(base, title_label, title_text, info_label, menu_config=None) %}
+<article class="management-card {{ base }}-card">
+    <div class="management-card__header {{ base }}-card__header">
+        <span class="management-card__label {{ base }}-card__label">{{ title_label }}</span>
+        {% if menu_config %}
+            {% set items = menu_config.get('items') %}
+            {% if items %}
+                {{ management_card_menu(base, menu_config.get('aria_label', 'Действия'), items) }}
+            {% endif %}
+        {% endif %}
+    </div>
+    <h2 class="management-card__name {{ base }}-card__name">{{ title_text }}</h2>
+    <div class="management-card__info {{ base }}-card__info">
+        <span class="management-card__label {{ base }}-card__label">{{ info_label }}</span>
+        <div class="management-card__data {{ base }}-card__data">
+            {% if caller %}
+                {{ caller() }}
+            {% endif %}
+        </div>
+    </div>
+</article>
+{% endmacro %}
+
+{% macro management_modal(config) %}
+{% set prefix = config.get('prefix') %}
+{% if prefix %}
+    {% set normalized_mode = 'update' if config.get('mode') == 'update' else 'create' %}
+    {% set show_modal = config.get('show') %}
+    {% set dataset_id_attr = config.get('dataset_id_attr') %}
+    {% set dataset_id_value = config.get('dataset_id_value') %}
+    {% set title_create = config.get('title_create', 'Добавление') %}
+    {% set title_update = config.get('title_update', 'Редактирование') %}
+    {% set submit_create = config.get('submit_create', 'Сохранить') %}
+    {% set submit_update = config.get('submit_update', submit_create) %}
+    {% set form_method = config.get('method', 'POST') %}
+    {% set form_action = config.get('action') %}
+    {% set hidden_fields = config.get('hidden_fields', []) %}
+    {% set cancel_label = config.get('cancel_label', 'Отмена') %}
+    {% set close_label = config.get('close_label', 'Закрыть форму') %}
+    <div class="management-modal {{ prefix }}-modal"
+        data-{{ prefix }}-modal
+        {% if show_modal %}data-open="true"{% endif %}
+        data-mode="{{ normalized_mode }}"
+        {% if dataset_id_attr and dataset_id_value %}
+            data-{{ dataset_id_attr }}="{{ dataset_id_value }}"
+        {% endif %}>
+        <div class="management-modal__overlay {{ prefix }}-modal__overlay" data-{{ prefix }}-close></div>
+        <div class="management-modal__dialog {{ prefix }}-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="{{ prefix }}-modal-title">
+            <header class="management-modal__header {{ prefix }}-modal__header">
+                <h2 id="{{ prefix }}-modal-title">
+                    {% if normalized_mode == 'update' %}
+                    {{ title_update }}
+                    {% else %}
+                    {{ title_create }}
+                    {% endif %}
+                </h2>
+                <button type="button" class="management-modal__close {{ prefix }}-modal__close" data-{{ prefix }}-close aria-label="{{ close_label }}">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </header>
+            <form method="{{ form_method }}" class="management-modal__form {{ prefix }}-modal__form" novalidate{% if form_action %} action="{{ form_action }}"{% endif %}>
+                {% for field in hidden_fields %}
+                    {% set field_name = field.get('name') %}
+                    {% if field_name %}
+                    <input type="hidden" name="{{ field_name }}" value="{{ field.get('value', '') }}">
+                    {% endif %}
+                {% endfor %}
+                {% if caller %}
+                    {{ caller() }}
+                {% endif %}
+                <footer class="management-modal__footer {{ prefix }}-modal__footer">
+                    <button type="button" class="button button--outline" data-{{ prefix }}-close>{{ cancel_label }}</button>
+                    <button type="submit" class="button main-button">
+                        {% if normalized_mode == 'update' %}
+                        {{ submit_update }}
+                        {% else %}
+                        {{ submit_create }}
+                        {% endif %}
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endmacro %}
+
+{% macro management_delete_form(prefix, id_field) %}
+<form method="POST" class="{{ prefix }}-delete-form" data-{{ prefix }}-delete-form>
+    <input type="hidden" name="form_type" value="delete">
+    <input type="hidden" name="{{ id_field }}" value="">
+</form>
+{% endmacro %}
+
+{% macro management_add_button(data_attribute, label) %}
+<button type="button" class="button main-button" {{ data_attribute }}>
+    <span class="button__icon" aria-hidden="true">＋</span>
+    {{ label }}
+</button>
+{% endmacro %}

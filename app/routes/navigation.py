@@ -17,17 +17,15 @@ PAGES_BY_ROLE: RolePagesMap = {
         {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
         {'label': 'Мероприятия', 'endpoint': 'main.index', 'icon': 'img/nav/events.svg'},
         {'label': 'Учителя', 'endpoint': 'main.teachers', 'icon': 'img/nav/teachers.svg'},
-        {'label': 'Здания', 'endpoint': 'main.index', 'icon': 'img/nav/buildings.svg'},
+        {'label': 'Здания', 'endpoint': 'main.buildings', 'icon': 'img/nav/buildings.svg'},
     ],
     'teacher': [
         {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
         {'label': 'Мероприятия', 'endpoint': 'main.index', 'icon': 'img/nav/events.svg'},
-        {'label': 'Здания', 'endpoint': 'main.index', 'icon': 'img/nav/buildings.svg'},
     ],
     'parent': [
         {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
         {'label': 'Мероприятия', 'endpoint': 'main.index', 'icon': 'img/nav/events.svg'},
-        {'label': 'Здания', 'endpoint': 'main.index', 'icon': 'img/nav/buildings.svg'},
     ],
 }
 
@@ -36,7 +34,6 @@ DEFAULT_PAGES: List[PageConfig] = [
     {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
     {'label': 'Мероприятия', 'endpoint': 'main.index', 'icon': 'img/nav/events.svg'},
     {'label': 'Учителя', 'endpoint': 'main.teachers', 'icon': 'img/nav/teachers.svg'},
-    {'label': 'Здания', 'endpoint': 'main.index', 'icon': 'img/nav/buildings.svg'},
 ]
 
 

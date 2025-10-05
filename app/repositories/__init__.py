@@ -5,12 +5,14 @@ from ..models import db
 from .base_repository import BaseRepository
 from .school_repository import SchoolRepository
 from .user_repository import UserRepository
+from .building_repository import BuildingRepository
 
 RepositoryMap = Dict[str, Type[BaseRepository]]
 
 _REPOSITORIES: RepositoryMap = {
     "users": UserRepository,
     "schools": SchoolRepository,
+    "buildings": BuildingRepository,
 }
 
 
@@ -27,5 +29,6 @@ __all__ = [
     "BaseRepository",
     "SchoolRepository",
     "UserRepository",
+    "BuildingRepository",
     "get_repository",
 ]

@@ -14,6 +14,10 @@ app/static/js/
 │   ├── dropdowns.js               # Generic [data-dropdown] controller
 │   └── search.js                  # Search form clear button behaviour
 ├── pages/
+│   ├── buildings/
+│   │   ├── grid.js                # Building card edit/delete actions
+│   │   ├── index.js               # Page bootstrap wired from template
+│   │   └── modal.js               # Create/update building modal logic
 │   └── teachers/
 │       ├── grid.js                # Teacher card edit/delete actions
 │       ├── import.js              # XLSX import workflow + feedback
@@ -26,7 +30,7 @@ app/static/js/
 ## Initiation Flow
 
 * `main.js` runs on DOM ready and configures shared interactions (account menu, alerts, copy buttons, search forms).
-* Page templates include additional entry points when required. For example, `admin/teachers.html` loads `pages/teachers/index.js`, which wires together dropdowns, modal behaviour, import handling, and grid actions.
+* Page templates include additional entry points when required. For example, `admin/teachers.html` loads `pages/teachers/index.js` (dropdowns, modal, import flow), while `admin/buildings.html` loads `pages/buildings/index.js` (dropdowns, modal, grid interactions).
 
 ## Adding New Behaviour
 
@@ -42,5 +46,6 @@ After changing UI logic, manually verify:
 - Sidebar account menu toggling and focus handling.
 - Auto-dismiss behaviour for flash alerts and copy-to-clipboard buttons.
 - Teachers page: search clear button, action dropdowns, modal open/update flows, delete confirmation, import success/error reporting.
+- Buildings page: search clear button, dropdown actions, modal create/update flows, delete confirmation.
 
 Automated UI tests are not yet available; run through the checklist locally before deploying.
