@@ -1,12 +1,24 @@
+{% from 'elements/header_macros.html' import preconnect_scripts, critical_general_styles, critical_base_styles %}
+{% from 'elements/render_header_macro.html' import render_header %}
+
 <!doctype html>
 <html lang="ru">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='style/style.css') }}">
+        {{ preconnect_scripts() }}
+
+        <style data-critical="true">
+            {{ critical_general_styles() }}
+            {{ critical_base_styles() }}
+        </style>
+
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sofia+Sans+Condensed:ital,wght@0,1..1000;1,1..1000&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sofia+Sans+Condensed:ital,wght@0,1..1000;1,1..1000&display=swap"></noscript>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='style/general/layout.css') }}" fetchpriority="high">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style/general/elements.css') }}" fetchpriority="high">
 
         {% block head %}{% endblock %}
 
@@ -18,10 +30,12 @@
                 <div class="sidebar-top-group">
                     <a href="{{ url_for('main.index') }}" class="sidebar-logo-link"><img src="{{ url_for('static', filename='img/main_logo.png') }}" alt="Logo" class="sidebar-logo"></a>
                     <ul class="sidebar-nav">
-                        {% for page, endpoint in pages %}
-                            <li class="sidebar-item current-page">
-                                <div></div>
-                                <a href="{{ url_for(endpoint) }}" class="sidebar-item-link">{{ page }}</a>
+                        {% for page in pages %}
+                            <li class="sidebar-item {{ 'current-page' if request.endpoint == page.endpoint }}">
+                                <a href="{{ url_for(page.endpoint) }}" class="sidebar-item-link">
+                                    <img src="{{ url_for('static', filename=page.icon) }}" alt="" class="sidebar-item-link-icon" role="presentation">
+                                    <span>{{ page.label }}</span>
+                                </a>
                             </li>
                         {% endfor %}
                     </ul>
@@ -35,7 +49,7 @@
                         <span class="sidebar-account-actions-label">{{ current_user.initials | default('Гость') }}</span>
                     </button>
                     <ul class="sidebar-popup-menu" role="menu">
-                        <li id="sidebar-popup-menu-account" class="sidebar-item">
+                        <li id="sidebar-popup-menu-account" class="sidebar-item {{ 'current-page' if request.endpoint == 'main.account' }}">
                             <a class="sidebar-item-link" href="{{ url_for('main.account') }}" role="menuitem">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
                                     <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
@@ -65,13 +79,13 @@
                     </ul>
                 </div>
             </aside>
-            <main class="main">
+            <div class="content-wrapper">
                 <div class="alerts-area center-alerts">
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% for category, msg in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            <div class="alert alert-{{ category }} alert-dismissible" role="alert">
                                 {{ msg }}
-                                <button type="button" style="background-image: url('{{ url_for('static', filename='img/close_icon.png') }}');" class="btn-close close-alert-btn" data-bs-dismiss="alert" aria-label="Close"></button>
+                                <button type="button" style="background-image: url('{{ url_for('static', filename='img/close_icon.png') }}');" class="btn-close close-alert-btn" aria-label="Close"></button>
                             </div>
                         {% endfor %}
                     {% endwith %}
@@ -84,10 +98,8 @@
                         </div>
                     {% endblock %}
                 </div>
-            </main>
+            </div>
         </div>
-
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
         <script src="{{ url_for('static', filename='script.js') }}"></script>
         {% block scripts %}{% endblock %}
     </body>

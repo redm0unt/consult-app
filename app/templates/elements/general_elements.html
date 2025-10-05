@@ -1,0 +1,19 @@
+{% macro render_search(query_placeholder) %}
+    <form class="search" method="GET" role="search" action="{{ url_for(request.endpoint) }}">
+        <input type="search"
+               name="q"
+               class="search__input"
+               placeholder="{{ query_placeholder | default('Поиск') }}"
+               value="{{ search_query }}"
+               aria-label="{{ query_placeholder | default('Поиск') }}">
+        <button type="button" class="search__clear" data-search-clear aria-label="Очистить поиск"{% if not search_query %} hidden{% endif %}>
+            <span class="visually-hidden">Очистить</span>
+        </button>
+    </form>
+{% endmacro %}
+
+{% macro render_empty_state_block(message) %}
+<section class="empty-state-block" role="status">
+    <p>{{ message }}</p>
+</section>
+{% endmacro %}

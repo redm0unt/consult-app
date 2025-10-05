@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 from flask import flash, redirect, render_template, request, session, url_for
 from flask.typing import ResponseReturnValue
-from flask_login import login_user
+from flask_login import current_user, login_user
 
 from ..repositories import UserRepository, get_repository
 from . import bp
@@ -13,6 +13,10 @@ user_repository: UserRepository = get_repository('users')
 @bp.route('/login', methods=['GET', 'POST'])
 def login() -> ResponseReturnValue:
     next_url: Optional[str] = request.args.get('next')
+
+    if current_user.is_authenticated:
+        flash('Вы уже аутентифицированы', 'info')
+        return redirect(next_url or url_for('main.index'))
 
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip()

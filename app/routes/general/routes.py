@@ -134,6 +134,7 @@ def account() -> ResponseReturnValue:
 
     return render_template(
         'general/account.html',
+        page_title='Аккаунт',
         pages=get_pages(),
         school=school,
         invite_link=invite_link,

@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="auth-form__actions">
-            <button type="submit" class="button">Регистрация</button>
+            <button type="submit" class="button main-button shadowed-button larger-button">Регистрация</button>
             <div class="auth-form__alternative-action">
                 <span>Уже есть аккаунт?</span>
                 <a class="auth-form__alternative-action-link" href="{{ url_for('auth.login', next=request.args.get('next')) }}">Войти</a>

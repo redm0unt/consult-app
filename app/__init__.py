@@ -12,8 +12,8 @@ from .routes import bp as main_bp
 
 def handle_sqlalchemy_error(err: SQLAlchemyError) -> Tuple[str, int]:
     error_msg = (
-        'Возникла ошибка при подключении к базе данных.'
-        'Повторите попытку позже.'
+        'Возникла ошибка при подключении к базе данных'
+        'Повторите попытку позже'
     )
     return f'{error_msg} (Подробнее: {err})', 500
 

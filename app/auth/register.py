@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from flask import flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
-from flask_login import login_user
+from flask_login import current_user, login_user
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from ..models import School, User
@@ -54,6 +54,8 @@ def _render_parent_form(
     if invite_code is not None:
         form_data.setdefault('invite_code', invite_code)
 
+    display_school_name = school_name if not show_invite_input else None
+
     return (
         render_template(
             'auth/registration/register_parent.html',
@@ -63,7 +65,7 @@ def _render_parent_form(
             form_data=form_data,
             show_invite_input=show_invite_input,
             invite_code=invite_code,
-            school_name=school_name,
+            school_name=display_school_name,
         ),
         status,
     )
@@ -71,6 +73,10 @@ def _render_parent_form(
 
 @bp.route('/register_admins', methods=['GET', 'POST'])
 def register_admin() -> ResponseReturnValue:
+    if current_user.is_authenticated:
+        flash('Вы уже аутентифицированы', 'info')
+        return redirect(url_for('main.index'))
+
     if request.method == 'POST':
         form_data: Dict[str, str] = {
             'full_name': request.form.get('full_name', '').strip(),
@@ -129,98 +135,120 @@ def register_admin() -> ResponseReturnValue:
 
 @bp.route('register_parents', methods=['GET', 'POST'])
 def register_parent() -> ResponseReturnValue:
-    invite_code_param = request.args.get('invite_code', '').strip()
-    initial_school: Optional[School] = (
-        school_repository.get_by_invite_code(invite_code=invite_code_param)
-        if invite_code_param
-        else None
-    )
-    school_name = initial_school.school_name if initial_school else None
-    show_invite_input = not bool(school_name)
-
-    if request.method == 'POST':
-        form_data: Dict[str, str] = {
-            'full_name': request.form.get('full_name', '').strip(),
-            'email': request.form.get('email', '').strip(),
-        }
-        password = request.form.get('password', '')
-
-        invite_code = invite_code_param or request.form.get('invite_code', '').strip()
-        form_data['invite_code'] = invite_code
-
-        if not all([form_data['full_name'], form_data['email'], invite_code, password]):
-            flash('Пожалуйста, заполните все поля формы', 'warning')
-            return _render_parent_form(
-                form_data,
-                400,
-                show_invite_input=show_invite_input,
-                invite_code=invite_code,
-                school_name=school_name,
-            )
-
-        try:
-            first_name, last_name, middle_name = _parse_full_name(form_data['full_name'])
-        except ValueError as exc:
-            flash(str(exc), 'warning')
-            return _render_parent_form(
-                form_data,
-                400,
-                show_invite_input=show_invite_input,
-                invite_code=invite_code,
-                school_name=school_name,
-            )
-
-        school = school_repository.get_by_invite_code(invite_code) if invite_code else None
-        if school and not school_name:
-            school_name = school.school_name
-        if not school:
-            flash('Школа с таким кодом приглашения не найдена', 'warning')
-            return _render_parent_form(
-                form_data,
-                400,
-                show_invite_input=show_invite_input,
-                invite_code=invite_code,
-                school_name=school_name,
-            )
-
-        try:
-            user: User = user_repository.create(
-                email=form_data['email'],
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-                middle_name=middle_name,
-                school_id=school.school_id,
-                role='parent',
-            )
-        except IntegrityError:
-            user_repository.rollback()
-            flash('Пользователь с такой электронной почтой уже зарегистрирован', 'warning')
-            return _render_parent_form(
-                form_data,
-                400,
-                show_invite_input=show_invite_input,
-                invite_code=invite_code,
-                school_name=school_name,
-            )
-        except SQLAlchemyError:
-            user_repository.rollback()
-            flash('Ошибка при создании пользователя. Пожалуйста, попробуйте ещё раз', 'danger')
-            return _render_parent_form(
-                form_data,
-                500,
-                show_invite_input=show_invite_input,
-                invite_code=invite_code,
-                school_name=school_name,
-            )
-
-        login_user(user)
-        flash('Вы успешно зарегистрировались!', 'success')
+    if current_user.is_authenticated:
+        flash('Вы уже аутентифицированы', 'info')
         return redirect(url_for('main.index'))
 
-    return _render_parent_form(
-        {'invite_code': invite_code_param} if invite_code_param else None,
-        show_invite_input=show_invite_input,
-        invite_code=invite_code_param or None,
-        school_name=school_name,
+    invite_code_query = (request.args.get('invite_code') or '').strip()
+    initial_school: Optional[School] = (
+        school_repository.get_by_invite_code(invite_code_query)
+        if invite_code_query
+        else None
     )
+    show_invite_input = initial_school is None
+    school_name = initial_school.school_name if initial_school else None
+
+    if request.method == 'GET':
+        invite_code_for_form: Optional[str] = invite_code_query or None
+
+        if invite_code_query and show_invite_input:
+            flash('Пригласительная ссылка недействительна, введите код приглашения вручную', 'warning')
+
+            # Don't pre-populate the invite code field with an invalid value.
+            invite_code_for_form = None
+
+        default_form_data = (
+            {'invite_code': invite_code_for_form}
+            if invite_code_for_form and not show_invite_input
+            else None
+        )
+
+        return _render_parent_form(
+            default_form_data,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code_for_form,
+            school_name=school_name,
+        )
+
+    form_data: Dict[str, str] = {
+        'full_name': request.form.get('full_name', '').strip(),
+        'email': request.form.get('email', '').strip(),
+    }
+    password = request.form.get('password', '')
+
+    invite_code = (
+        request.form.get('invite_code', '').strip()
+        if show_invite_input
+        else invite_code_query
+    )
+    form_data['invite_code'] = invite_code
+
+    if not all([form_data['full_name'], form_data['email'], invite_code, password]):
+        flash('Пожалуйста, заполните все поля формы', 'warning')
+        return _render_parent_form(
+            form_data,
+            400,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code or None,
+            school_name=school_name,
+        )
+
+    try:
+        first_name, last_name, middle_name = _parse_full_name(form_data['full_name'])
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+        return _render_parent_form(
+            form_data,
+            400,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code or None,
+            school_name=school_name,
+        )
+
+    school = school_repository.get_by_invite_code(invite_code)
+    if not school:
+        flash('Школа с таким кодом приглашения не найдена', 'warning')
+        return _render_parent_form(
+            form_data,
+            400,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code or None,
+            school_name=school_name,
+        )
+
+    school_name = school.school_name
+
+    try:
+        user: User = user_repository.create(
+            email=form_data['email'],
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            middle_name=middle_name,
+            school_id=school.school_id,
+            role='parent',
+        )
+    except IntegrityError:
+        user_repository.rollback()
+        flash('Пользователь с такой электронной почтой уже зарегистрирован', 'warning')
+        return _render_parent_form(
+            form_data,
+            400,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code or None,
+            school_name=school_name,
+        )
+    except SQLAlchemyError:
+        user_repository.rollback()
+        flash('Ошибка при создании пользователя. Пожалуйста, попробуйте ещё раз', 'danger')
+        return _render_parent_form(
+            form_data,
+            500,
+            show_invite_input=show_invite_input,
+            invite_code=invite_code or None,
+            school_name=school_name,
+        )
+
+    login_user(user)
+    flash('Вы успешно зарегистрировались!', 'success')
+    return redirect(url_for('main.index'))

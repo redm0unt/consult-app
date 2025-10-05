@@ -96,8 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type} alert-dismissible fade show`;
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible`;
         alert.setAttribute('role', 'alert');
 
         const messageWrapper = document.createElement('div');
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (Array.isArray(details) && details.length) {
             const list = document.createElement('ul');
-            list.className = 'mt-2 mb-0';
+            list.className = 'alert__details';
             details.forEach((detail) => {
                 const item = document.createElement('li');
                 item.textContent = detail;
@@ -118,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
         closeButton.className = 'btn-close close-alert-btn';
-        closeButton.setAttribute('data-bs-dismiss', 'alert');
         closeButton.setAttribute('aria-label', 'Close');
         if (closeButtonBackground) {
             closeButton.style.backgroundImage = closeButtonBackground;
@@ -345,12 +344,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const handleImportResponse = (data) => {
             if (!data) {
-                showAlert('Не удалось обработать ответ сервера.', 'danger');
+                showAlert('Не удалось обработать ответ сервера', 'danger');
                 return;
             }
 
             if (!data.success) {
-                const message = data.message || 'Не удалось загрузить учителей.';
+                const message = data.message || 'Не удалось загрузить учителей';
                 if (Array.isArray(data.errors) && data.errors.length) {
                     showAlert([message, data.errors.join('\n')].join('\n'), 'danger');
                 } else {
@@ -373,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            showAlert(data.message || 'Учителя успешно загружены.', 'success', details);
+            showAlert(data.message || 'Учителя успешно загружены', 'success', details);
 
             window.setTimeout(() => {
                 window.location.reload();
@@ -414,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data && (data.message || (Array.isArray(data.errors) && data.errors.length))) {
                             handleImportResponse({ success: false, ...data });
                         } else {
-                            showAlert('Произошла ошибка при загрузке файла. Попробуйте позже.', 'danger');
+                            showAlert('Произошла ошибка при загрузке файла. Попробуйте позже', 'danger');
                         }
                         return;
                     }
@@ -422,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleImportResponse(data);
                 } catch (error) {
                     console.error('Failed to upload teachers file', error);
-                    showAlert('Произошла ошибка при загрузке файла. Попробуйте позже.', 'danger');
+                    showAlert('Произошла ошибка при загрузке файла. Попробуйте позже', 'danger');
                 } finally {
                     importInput.value = '';
                     resetImportState();

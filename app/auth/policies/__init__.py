@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Type
 from .account_policy import AccountPolicy
 from .base_policy import BasePolicy, authentication_required
 from .schools_policy import SchoolsPolicy
-from .users_policy import TeachersPolicy
+from .teachers_policy import TeachersPolicy
 
 
 PolicyClass = Type[BasePolicy]
@@ -11,7 +11,7 @@ PolicyClass = Type[BasePolicy]
 
 policies_registry: Dict[str, PolicyClass] = {
     'account': AccountPolicy,
-    'users': TeachersPolicy,
+    'teachers': TeachersPolicy,
     'schools': SchoolsPolicy,
 }
 

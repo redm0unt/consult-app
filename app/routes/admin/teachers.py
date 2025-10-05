@@ -29,20 +29,20 @@ def _generate_password(length: int = 12) -> str:
 
 @bp.route('/teachers', methods=['GET', 'POST'])
 @login_required
-@check_rights('users', 'get_page')
+@check_rights('teachers', 'get_page')
 def teachers() -> ResponseReturnValue:
-    users_policy = TeachersPolicy(user_id=current_user.user_id)
+    teachers_policy = TeachersPolicy(user_id=current_user.user_id)
 
     school = current_user.school
     search_query = (request.args.get('q') or '').strip()
     form_data: dict[str, str] = {}
     form_mode = 'create'
     form_teacher_id: Optional[int] = None
-    can_manage_users = users_policy.create()
+    can_manage_teachers = teachers_policy.create()
     show_create_form = False
 
     if request.method == 'POST':
-        if not can_manage_users:
+        if not can_manage_teachers:
             abort(403)
 
         form_type = request.form.get('form_type') or 'create'
@@ -53,7 +53,7 @@ def teachers() -> ResponseReturnValue:
                 flash('Не удалось определить учителя для удаления', 'warning')
                 return redirect(url_for('main.teachers'))
 
-            if not users_policy.delete():
+            if not teachers_policy.delete():
                 abort(403)
 
             teacher = db.session.get(Teacher, teacher_id)
@@ -99,7 +99,7 @@ def teachers() -> ResponseReturnValue:
             or email_lower.startswith('@')
             or email_lower.endswith('@')
             or ' ' in email_value
-            or '.' not in email_lower.split('@', 1)[-1]
+            or '' not in email_lower.split('@', 1)[-1]
         ):
             errors.append('Введите корректный адрес электронной почты')
 
@@ -120,7 +120,7 @@ def teachers() -> ResponseReturnValue:
             form_teacher_id = teacher_id
             if not teacher_id:
                 errors.append('Не удалось определить учителя для обновления')
-            elif not users_policy.edit():
+            elif not teachers_policy.edit():
                 abort(403)
             else:
                 teacher = db.session.get(Teacher, teacher_id)
@@ -194,11 +194,12 @@ def teachers() -> ResponseReturnValue:
         teachers_list = db.session.execute(stmt).scalars().all()
 
     return render_template(
-        'teacher/index.html',
+        'admin/teachers.html',
+        page_title="Учителя",
         pages=get_pages(),
         teachers=teachers_list,
         search_query=search_query,
-        can_manage_users=can_manage_users,
+        can_manage_teachers=can_manage_teachers,
         teacher_form_data=form_data,
         show_teacher_form=show_create_form,
         teacher_form_mode=form_mode,
@@ -208,27 +209,27 @@ def teachers() -> ResponseReturnValue:
 
 @bp.route('/teachers/import', methods=['POST'])
 @login_required
-@check_rights('users', 'create')
+@check_rights('teachers', 'create')
 def teachers_import() -> ResponseReturnValue:
     school = current_user.school
     if not school:
         return jsonify({
             'success': False,
-            'message': 'Невозможно определить школу для привязки учителей. Обратитесь к администратору системы.',
+            'message': 'Невозможно определить школу для привязки учителей. Обратитесь к администратору системы',
         }), 400
 
     upload = request.files.get('file')
     if not upload or not upload.filename:
         return jsonify({
             'success': False,
-            'message': 'Выберите Excel-файл с учителями перед загрузкой.',
+            'message': 'Выберите Excel-файл с учителями перед загрузкой',
         }), 400
 
     filename_lower = upload.filename.lower()
     if not filename_lower.endswith('.xlsx'):
         return jsonify({
             'success': False,
-            'message': 'Поддерживается только импорт файлов в формате .xlsx.',
+            'message': 'Поддерживается только импорт файлов в формате .xlsx',
         }), 400
 
     try:
@@ -237,7 +238,7 @@ def teachers_import() -> ResponseReturnValue:
         current_app.logger.exception('Failed to load teachers workbook')
         return jsonify({
             'success': False,
-            'message': 'Не удалось прочитать файл. Убедитесь, что это корректный Excel-документ (.xlsx).',
+            'message': 'Не удалось прочитать файл. Убедитесь, что это корректный Excel-документ (.xlsx)',
         }), 400
 
     try:
@@ -249,7 +250,7 @@ def teachers_import() -> ResponseReturnValue:
     if not rows:
         return jsonify({
             'success': False,
-            'message': 'Файл пуст. Добавьте данные об учителях и повторите попытку.',
+            'message': 'Файл пуст. Добавьте данные об учителях и повторите попытку',
         }), 400
 
     header_row = rows[0]
@@ -270,7 +271,7 @@ def teachers_import() -> ResponseReturnValue:
     if email_index == fullname_index:
         return jsonify({
             'success': False,
-            'message': 'Файл должен содержать отдельные колонки для email и ФИО учителя.',
+            'message': 'Файл должен содержать отдельные колонки для email и ФИО учителя',
         }), 400
 
     created_teachers: list[dict[str, str]] = []
@@ -289,7 +290,7 @@ def teachers_import() -> ResponseReturnValue:
         full_name_value = str(full_name_raw).strip() if full_name_raw is not None else ''
 
         if not email_value:
-            errors.append(f'Строка {offset}: не указана электронная почта учителя.')
+            errors.append(f'Строка {offset}: не указана электронная почта учителя')
             continue
 
         email_lower = email_value.lower()
@@ -300,17 +301,17 @@ def teachers_import() -> ResponseReturnValue:
             or ' ' in email_value
             or '.' not in email_lower.split('@', 1)[-1]
         ):
-            errors.append(f'Строка {offset}: некорректный адрес электронной почты — "{email_value}".')
+            errors.append(f'Строка {offset}: некорректный адрес электронной почты — "{email_value}"')
             continue
 
         if email_lower in seen_emails:
-            errors.append(f'Строка {offset}: адрес "{email_value}" уже встречался в файле. Дубликат пропущен.')
+            errors.append(f'Строка {offset}: адрес "{email_value}" уже встречался в файле. Дубликат пропущен')
             continue
 
         seen_emails.add(email_lower)
 
         if not full_name_value:
-            errors.append(f'Строка {offset}: не указано ФИО учителя.')
+            errors.append(f'Строка {offset}: не указано ФИО учителя')
             continue
 
         try:
@@ -322,7 +323,7 @@ def teachers_import() -> ResponseReturnValue:
         stmt = select(User).where(func.lower(User.email) == email_lower)
         existing_user = db.session.execute(stmt).scalar_one_or_none()
         if existing_user:
-            errors.append(f'Строка {offset}: пользователь с электронной почтой "{email_value}" уже существует.')
+            errors.append(f'Строка {offset}: пользователь с электронной почтой "{email_value}" уже существует')
             continue
 
         password = _generate_password()
@@ -339,12 +340,12 @@ def teachers_import() -> ResponseReturnValue:
             )
         except IntegrityError:
             user_repository.rollback()
-            errors.append(f'Строка {offset}: пользователь с электронной почтой "{email_value}" уже существует.')
+            errors.append(f'Строка {offset}: пользователь с электронной почтой "{email_value}" уже существует')
             continue
         except SQLAlchemyError:
             user_repository.rollback()
             current_app.logger.exception('Failed to create teacher from import (row %s)', offset)
-            errors.append(f'Строка {offset}: не удалось создать учителя из-за ошибки базы данных.')
+            errors.append(f'Строка {offset}: не удалось создать учителя из-за ошибки базы данных')
             continue
 
         recorded_full_name = ' '.join(filter(None, [last_name, first_name, middle_name]))
@@ -357,13 +358,13 @@ def teachers_import() -> ResponseReturnValue:
     if not created_teachers:
         return jsonify({
             'success': False,
-            'message': 'Учителя не были созданы.',
-            'errors': errors or ['Файл не содержит корректных данных для импорта.'],
+            'message': 'Учителя не были созданы',
+            'errors': errors or ['Файл не содержит корректных данных для импорта'],
         }), 400
 
     return jsonify({
         'success': True,
-        'message': f'Добавлено учителей: {len(created_teachers)}.',
+        'message': f'Добавлено учителей: {len(created_teachers)}',
         'count': len(created_teachers),
         'errors': errors,
         'teachers': created_teachers,
