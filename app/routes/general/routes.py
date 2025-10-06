@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Iterable, Optional
+
 from flask import abort, current_app, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
@@ -6,12 +10,159 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.auth import check_rights
 from app.auth.policies import AccountPolicy
-from app.models import User, db
+from app.models import Event, Slot, SlotStatus, Teacher, User, db
+from app.repositories import EventRepository, get_repository
 from app.routes import bp, get_pages
+
+
+event_repository: EventRepository = get_repository('events')
+
+
+@dataclass(frozen=True)
+class DashboardSlotView:
+    label: str
+    state: str
+
+
+@dataclass(frozen=True)
+class DashboardTeacherView:
+    teacher_id: int
+    name: str
+    email: str
+    slots: tuple[DashboardSlotView, ...]
+    total_slots: int
+    taken_slots: int
+    has_availability: bool
+
+
+@dataclass(frozen=True)
+class DashboardEventView:
+    event_id: int
+    name: str
+    date_label: str
+    time_label: str
+    start_iso: str
+    end_iso: str
+    is_ongoing: bool
+    is_future: bool
+
+
+def format_time_range(start: datetime, end: datetime) -> str:
+    return f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
+
+
+def format_date(value: datetime) -> str:
+    return value.strftime('%d.%m.%Y')
+
+
+def build_dashboard_slot(slot: Slot) -> DashboardSlotView:
+    state = 'free'
+    if slot.status == SlotStatus.cancelled:
+        state = 'cancelled'
+    elif slot.parent_id is not None and slot.status == SlotStatus.booked:
+        state = 'taken'
+    label = format_time_range(slot.start_time, slot.end_time)
+    return DashboardSlotView(label=label, state=state)
+
+
+def build_dashboard_teacher(teacher: Teacher, slots: Iterable[Slot]) -> DashboardTeacherView:
+    slot_items = tuple(build_dashboard_slot(slot) for slot in slots)
+    total_slots = len(slot_items)
+    taken_slots = sum(1 for slot in slot_items if slot.state == 'taken')
+    has_availability = any(slot.state == 'free' for slot in slot_items)
+    return DashboardTeacherView(
+        teacher_id=teacher.teacher_id,
+        name=teacher.full_name or teacher.email,
+        email=teacher.email,
+        slots=slot_items,
+        total_slots=total_slots,
+        taken_slots=taken_slots,
+        has_availability=has_availability,
+    )
+
+
+def build_dashboard_event(event: Event, reference_time: datetime) -> DashboardEventView:
+    is_ongoing = event.start_time <= reference_time < event.end_time
+    is_future = reference_time < event.start_time
+    return DashboardEventView(
+        event_id=event.event_id,
+        name=event.name or 'Мероприятие',
+        date_label=format_date(event.start_time),
+        time_label=format_time_range(event.start_time, event.end_time),
+        start_iso=event.start_time.isoformat(),
+        end_iso=event.end_time.isoformat(),
+        is_ongoing=is_ongoing,
+        is_future=is_future,
+    )
+
+
+def render_admin_dashboard() -> ResponseReturnValue:
+    pages = get_pages()
+    school = current_user.school
+    search_query = (request.args.get('q') or '').strip()
+
+    if not school:
+        return render_template(
+            'admin/dashboard.html',
+            page_title='Главная',
+            page_description='Ближайшее мероприятие',
+            pages=pages,
+            dashboard_event=None,
+            teacher_cards=(),
+            search_query=search_query,
+        )
+
+    event_repository.refresh_statuses_for_school(school.school_id)
+    event = event_repository.get_closest_for_school(school.school_id)
+
+    if not event:
+        return render_template(
+            'admin/dashboard.html',
+            page_title='Главная',
+            page_description='Ближайшее мероприятие',
+            pages=pages,
+            dashboard_event=None,
+            teacher_cards=(),
+            search_query=search_query,
+        )
+
+    reference_time = datetime.now(event.start_time.tzinfo) if event.start_time.tzinfo else datetime.now()
+
+    dashboard_event = build_dashboard_event(event, reference_time)
+
+    slots_by_teacher: dict[int, list[Slot]] = {}
+    for slot in event.slots:
+        slots_by_teacher.setdefault(slot.teacher_id, []).append(slot)
+
+    teacher_cards: list[DashboardTeacherView] = []
+    teachers_sorted = sorted(event.teachers, key=lambda teacher: teacher.full_name or teacher.email or '')
+    for teacher in teachers_sorted:
+        teacher_slots = sorted(slots_by_teacher.get(teacher.teacher_id, []), key=lambda slot: slot.start_time)
+        card = build_dashboard_teacher(teacher, teacher_slots)
+        teacher_cards.append(card)
+
+    if search_query:
+        lowered = search_query.lower()
+        teacher_cards = [
+            card for card in teacher_cards
+            if lowered in card.name.lower() or lowered in card.email.lower()
+        ]
+
+    return render_template(
+        'admin/dashboard.html',
+        page_title='Главная',
+        page_description='Ближайшее мероприятие',
+        pages=pages,
+        dashboard_event=dashboard_event,
+        teacher_cards=teacher_cards,
+        search_query=search_query,
+    )
 
 
 @bp.route('/')
 def index() -> ResponseReturnValue:
+    if current_user.is_authenticated and getattr(current_user, 'role', None) == 'admin':
+        return render_admin_dashboard()
     return render_template('base.html', pages=get_pages())
 
 

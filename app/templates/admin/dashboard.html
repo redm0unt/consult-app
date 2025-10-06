@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/admin/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main admin-dashboard">
+    <section class="dashboard-hero" aria-label="Ближайшее мероприятие">
+        {% if dashboard_event %}
+        <div class="dashboard-event-card">
+            <div class="dashboard-event-card__header">
+                <div class="dashboard-event-card__title-group">
+                    <span class="dashboard-event-card__badge">{{ dashboard_event.name }}</span>
+                    <div class="dashboard-event-card__meta">
+                        <div class="dashboard-event-card__meta-item">
+                            <span class="dashboard-event-card__meta-label">Дата</span>
+                            <span class="dashboard-event-card__meta-value">{{ dashboard_event.date_label }}</span>
+                        </div>
+                        <div class="dashboard-event-card__meta-item">
+                            <span class="dashboard-event-card__meta-label">Время</span>
+                            <span class="dashboard-event-card__meta-value">{{ dashboard_event.time_label }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-event-card__status">
+                    {% if dashboard_event.is_future %}
+                    <span class="dashboard-event-card__status-label">Начало через</span>
+                    <div class="dashboard-countdown" data-dashboard-countdown data-countdown-target="{{ dashboard_event.start_iso }}">
+                        <div class="dashboard-countdown__item">
+                            <span class="dashboard-countdown__value" data-countdown-days>00</span>
+                            <span class="dashboard-countdown__label">Дни</span>
+                        </div>
+                        <div class="dashboard-countdown__separator">:</div>
+                        <div class="dashboard-countdown__item">
+                            <span class="dashboard-countdown__value" data-countdown-hours>00</span>
+                            <span class="dashboard-countdown__label">Часы</span>
+                        </div>
+                        <div class="dashboard-countdown__separator">:</div>
+                        <div class="dashboard-countdown__item">
+                            <span class="dashboard-countdown__value" data-countdown-minutes>00</span>
+                            <span class="dashboard-countdown__label">Минуты</span>
+                        </div>
+                    </div>
+                    {% elif dashboard_event.is_ongoing %}
+                    <div class="dashboard-event-card__live" role="status">
+                        <span class="dashboard-event-card__live-dot" aria-hidden="true"></span>
+                        <span class="dashboard-event-card__live-text">Идёт сейчас</span>
+                    </div>
+                    {% else %}
+                    <div class="dashboard-event-card__ended" role="status">Завершено</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="dashboard-event-empty" role="note">
+            <h2>У школы пока нет ближайших мероприятий</h2>
+            <p>Создайте мероприятие на вкладке «Мероприятия», чтобы увидеть расписание здесь.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="dashboard-teachers" aria-label="Записи">
+        <header class="dashboard-teachers__header">
+            <h2 class="dashboard-teachers__title">Записи</h2>
+            <form class="dashboard-search" method="GET" action="{{ url_for('main.index') }}" role="search">
+                <label class="visually-hidden" for="dashboard-teacher-search">Поиск учителя</label>
+                <input id="dashboard-teacher-search" type="search" name="q" value="{{ search_query }}" placeholder="Поиск учителя" autocomplete="off" data-dashboard-search-input>
+                {% if search_query %}
+                <button type="button" class="dashboard-search__clear" data-dashboard-search-clear aria-label="Очистить поиск"></button>
+                {% endif %}
+            </form>
+        </header>
+
+        {% if teacher_cards %}
+        <div class="teacher-grid" data-dashboard-teachers>
+            {% for teacher in teacher_cards %}
+            <article class="teacher-card{% if not teacher.has_availability and teacher.total_slots > 0 %} teacher-card--full{% endif %}" data-teacher-card data-teacher-search="{{ teacher.name | lower }} {{ teacher.email | lower }}">
+                <div class="teacher-card__header">
+                    <span class="teacher-card__label">ФИО</span>
+                    <h3 class="teacher-card__name">{{ teacher.name }}</h3>
+                    <p class="teacher-card__sub">Выбрать время встречи</p>
+                    {% if not teacher.has_availability and teacher.total_slots > 0 %}
+                    <div class="teacher-card__banner" role="status">Все слоты заняты</div>
+                    {% endif %}
+                </div>
+                {% if teacher.slots %}
+                <div class="teacher-card__slots" role="list">
+                    {% for slot in teacher.slots %}
+                    <span class="teacher-card__slot teacher-card__slot--{{ slot.state }}" role="listitem">{{ slot.label }}</span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="teacher-card__empty">Для этого учителя пока нет слотов.</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        <div class="dashboard-no-results" data-dashboard-no-results hidden>По запросу ничего не найдено.</div>
+        {% else %}
+        <div class="dashboard-empty" role="note">
+            {% if dashboard_event %}
+            <p>Список учителей для этого мероприятия пока пуст.</p>
+            {% else %}
+            <p>Добавьте мероприятие, чтобы управлять расписанием учителей.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='js/pages/admin/dashboard.js') }}"></script>
+{% endblock %}

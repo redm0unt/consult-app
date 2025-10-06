@@ -5,7 +5,7 @@ from sqlalchemy import case, select
 from sqlalchemy.orm import selectinload
 
 from .base_repository import BaseRepository
-from ..models import BuildingBooking, Event, EventStatus, Teacher, event_teachers_table
+from ..models import BuildingBooking, Event, EventStatus, Slot, Teacher, event_teachers_table
 
 
 class EventRepository(BaseRepository[Event]):
@@ -57,6 +57,38 @@ class EventRepository(BaseRepository[Event]):
         )
         result = self.session.execute(stmt)
         return list(result.scalars().unique())
+
+    def get_closest_for_school(
+        self,
+        school_id: int,
+        *,
+        reference_time: Optional[datetime] = None,
+        include_past: bool = False,
+    ) -> Optional[Event]:
+        now = reference_time or datetime.now()
+        status_order = case(
+            (Event.status == EventStatus.ongoing, 0),
+            (Event.status == EventStatus.scheduled, 1),
+            (Event.status == EventStatus.completed, 2),
+            (Event.status == EventStatus.cancelled, 3),
+            else_=4,
+        )
+        stmt = (
+            select(Event)
+            .where(Event.school_id == school_id)
+            .options(
+                selectinload(Event.slots).selectinload(Slot.teacher),
+                selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
+                selectinload(Event.teachers),
+            )
+            .order_by(status_order, Event.start_time.asc(), Event.event_id.desc())
+        )
+        if not include_past:
+            stmt = stmt.where(Event.end_time >= now)
+
+        stmt = stmt.limit(1)
+        result = self.session.execute(stmt)
+        return result.scalars().unique().first()
 
     def _resolve_teachers(self, teacher_ids: Optional[set[int]]) -> list[Teacher]:
         if not teacher_ids:
