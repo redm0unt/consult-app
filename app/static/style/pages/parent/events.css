@@ -149,7 +149,7 @@
     flex-direction: column;
     gap: 20px;
     padding: 24px;
-    border-radius: 18px;
+    border-radius: 10px;
     background: var(--color-white_4);
     border: 3px solid var(--color-transparent-lines);
     box-shadow: 0 18px 36px rgba(var(--color-shadow-rgb), 0.12);
@@ -200,7 +200,7 @@
     align-items: center;
     gap: 6px;
     padding: 12px 16px;
-    border-radius: 14px;
+    border-radius: 8px;
     border: none;
     min-width: 112px;
     font-size: 15px;
@@ -280,7 +280,7 @@
     background: rgba(var(--color-deep-green-rgb, 46, 107, 85), 0.16);
     color: var(--color-deep-green_2);
     padding: 3px 8px;
-    border-radius: 999px;
+    border-radius: 5px;
 }
 
 .parent-teacher-card__empty {

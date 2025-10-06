@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/teacher/consultations.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main teacher-consultations">
+    {% if event_cards %}
+    <section class="teacher-consultations__list" aria-label="Мероприятия с консультациями">
+        {% for event in event_cards %}
+        <article class="teacher-consultations__event">
+            <header class="teacher-consultations__header">
+                <div class="teacher-consultations__titles">
+                    <p class="teacher-consultations__event-label">Мероприятие</p>
+                    <h2 class="teacher-consultations__event-title">{{ event.title_text }}</h2>
+                </div>
+                <div class="teacher-consultations__status">
+                    <span class="teacher-consultations__status-badge teacher-consultations__status-badge--{{ event.status_modifier }}">{{ event.status_label }}</span>
+                    {% if event.status_hint %}
+                    <span class="teacher-consultations__status-hint">{{ event.status_hint }}</span>
+                    {% endif %}
+                </div>
+            </header>
+            <dl class="teacher-consultations__meta">
+                <div class="teacher-consultations__meta-item">
+                    <dt>Дата</dt>
+                    <dd>{{ event.date_label }}</dd>
+                </div>
+                <div class="teacher-consultations__meta-item">
+                    <dt>Время</dt>
+                    <dd>{{ event.time_label }}</dd>
+                </div>
+                {% if event.location_label %}
+                <div class="teacher-consultations__meta-item">
+                    <dt>Локация</dt>
+                    <dd>{{ event.location_label }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+
+            {% if event.slots %}
+            <ul class="teacher-consultations__slots" aria-label="Запланированные консультации">
+                {% for slot in event.slots %}
+                <li class="teacher-consultations__slot teacher-consultations__slot--{{ slot.status_modifier }}">
+                    <div class="teacher-consultations__slot-main">
+                        <span class="teacher-consultations__slot-time">{{ slot.slot_label }}</span>
+                        <span class="teacher-consultations__slot-badge teacher-consultations__slot-badge--{{ slot.status_modifier }}">{{ slot.status_label }}</span>
+                    </div>
+                    <div class="teacher-consultations__slot-meta">
+                        <span class="teacher-consultations__slot-parent">{{ slot.parent_alias }}</span>
+                        {% if slot.status_hint %}
+                        <span class="teacher-consultations__slot-hint">{{ slot.status_hint }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="teacher-consultations__slot-code">{{ slot.slot_code }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="teacher-consultations__no-slots">Пока нет записей на консультации в рамках этого мероприятия.</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="teacher-consultations__empty-state" role="note">
+        <h2 class="teacher-consultations__empty-title">У вас пока нет консультаций</h2>
+        <p class="teacher-consultations__empty-text">Когда родители запишутся на встречу с вами, она появится здесь. Загляните позже.</p>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

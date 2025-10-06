@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Iterable, Optional
+from datetime import datetime, timedelta
+from typing import Iterable, Mapping, Optional
 
 from flask import abort, current_app, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
@@ -55,26 +55,40 @@ def format_date(value: datetime) -> str:
     return value.strftime('%d.%m.%Y')
 
 
-def build_dashboard_slot(slot: Slot) -> DashboardSlotView:
+def build_dashboard_slot(slot_start: datetime, slot_end: datetime, slot: Optional[Slot]) -> DashboardSlotView:
     state = 'free'
-    if slot.status == SlotStatus.cancelled:
-        state = 'cancelled'
-    elif slot.parent_id is not None and slot.status == SlotStatus.booked:
-        state = 'taken'
-    label = format_time_range(slot.start_time, slot.end_time)
+    if slot is not None:
+        if slot.status == SlotStatus.cancelled:
+            state = 'cancelled'
+        elif slot.parent_id is not None and slot.status == SlotStatus.booked:
+            state = 'taken'
+    label = format_time_range(slot_start, slot_end)
     return DashboardSlotView(label=label, state=state)
 
 
-def build_dashboard_teacher(teacher: Teacher, slots: Iterable[Slot]) -> DashboardTeacherView:
-    slot_items = tuple(build_dashboard_slot(slot) for slot in slots)
+def build_dashboard_teacher(
+    teacher: Teacher,
+    slot_times: Iterable[tuple[datetime, datetime]],
+    existing_slots: Mapping[tuple[int, datetime], Slot],
+) -> DashboardTeacherView:
+    slot_items: list[DashboardSlotView] = []
+    taken_slots = 0
+
+    for slot_start, slot_end in slot_times:
+        slot = existing_slots.get((teacher.teacher_id, slot_start))
+        slot_view = build_dashboard_slot(slot_start, slot_end, slot)
+        slot_items.append(slot_view)
+        if slot_view.state == 'taken':
+            taken_slots += 1
+
     total_slots = len(slot_items)
-    taken_slots = sum(1 for slot in slot_items if slot.state == 'taken')
     has_availability = any(slot.state == 'free' for slot in slot_items)
+
     return DashboardTeacherView(
         teacher_id=teacher.teacher_id,
         name=teacher.full_name or teacher.email,
         email=teacher.email,
-        slots=slot_items,
+        slots=tuple(slot_items),
         total_slots=total_slots,
         taken_slots=taken_slots,
         has_availability=has_availability,
@@ -94,6 +108,22 @@ def build_dashboard_event(event: Event, reference_time: datetime) -> DashboardEv
         is_ongoing=is_ongoing,
         is_future=is_future,
     )
+
+
+def generate_slot_times(event: Event) -> list[tuple[datetime, datetime]]:
+    total = event.consultations_count or 0
+    duration = event.consultation_duration_minutes or 0
+    if total <= 0 or duration <= 0:
+        return []
+
+    times: list[tuple[datetime, datetime]] = []
+    start_time = event.start_time
+    for index in range(total):
+        slot_start = start_time + timedelta(minutes=index * duration)
+        slot_end = slot_start + timedelta(minutes=duration)
+        times.append((slot_start, slot_end))
+
+    return times
 
 
 def render_admin_dashboard() -> ResponseReturnValue:
@@ -130,15 +160,17 @@ def render_admin_dashboard() -> ResponseReturnValue:
 
     dashboard_event = build_dashboard_event(event, reference_time)
 
-    slots_by_teacher: dict[int, list[Slot]] = {}
+    slot_times = generate_slot_times(event)
+    slots_map: dict[tuple[int, datetime], Slot] = {}
     for slot in event.slots:
-        slots_by_teacher.setdefault(slot.teacher_id, []).append(slot)
+        key = (slot.teacher_id, slot.start_time)
+        if key not in slots_map:
+            slots_map[key] = slot
 
     teacher_cards: list[DashboardTeacherView] = []
     teachers_sorted = sorted(event.teachers, key=lambda teacher: teacher.full_name or teacher.email or '')
     for teacher in teachers_sorted:
-        teacher_slots = sorted(slots_by_teacher.get(teacher.teacher_id, []), key=lambda slot: slot.start_time)
-        card = build_dashboard_teacher(teacher, teacher_slots)
+        card = build_dashboard_teacher(teacher, slot_times, slots_map)
         teacher_cards.append(card)
 
     if search_query:

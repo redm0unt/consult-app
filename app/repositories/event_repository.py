@@ -28,6 +28,8 @@ class EventRepository(BaseRepository[Event]):
             .where(Event.school_id == school_id)
             .options(
                 selectinload(Event.slots),
+                selectinload(Event.slots).selectinload(Slot.parent),
+                selectinload(Event.slots).selectinload(Slot.teacher),
                 selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
                 selectinload(Event.teachers),
             )
@@ -50,6 +52,8 @@ class EventRepository(BaseRepository[Event]):
             .where(event_teachers_table.c.teacher_id == teacher_id)
             .options(
                 selectinload(Event.slots),
+                selectinload(Event.slots).selectinload(Slot.parent),
+                selectinload(Event.slots).selectinload(Slot.teacher),
                 selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
                 selectinload(Event.teachers),
             )

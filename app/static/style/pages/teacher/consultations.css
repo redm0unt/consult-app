@@ -1,0 +1,280 @@
+.teacher-consultations {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.teacher-consultations__list {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.teacher-consultations__event {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 28px;
+    border-radius: 10px;
+    background: var(--color-white_4);
+    border: 3px solid var(--color-transparent-lines);
+    box-shadow: 0 18px 36px rgba(var(--color-shadow-rgb), 0.12);
+}
+
+.teacher-consultations__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.teacher-consultations__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.teacher-consultations__event-label {
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(var(--color-shadow-rgb), 0.6);
+}
+
+.teacher-consultations__event-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.teacher-consultations__status {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.teacher-consultations__status-badge {
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.teacher-consultations__status-badge--scheduled {
+    background: rgba(var(--color-accent-rgb), 0.16);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-accent-rgb), 0.25);
+}
+
+.teacher-consultations__status-badge--ongoing {
+    background: rgba(246, 94, 70, 0.16);
+    color: rgb(196, 50, 28);
+    box-shadow: inset 0 0 0 2px rgba(246, 94, 70, 0.22);
+}
+
+.teacher-consultations__status-badge--completed {
+    background: rgba(var(--color-shadow-rgb), 0.14);
+    color: rgba(var(--color-shadow-rgb), 0.7);
+}
+
+.teacher-consultations__status-badge--cancelled {
+    background: rgba(var(--color-shadow-rgb), 0.1);
+    color: rgba(var(--color-shadow-rgb), 0.6);
+}
+
+.teacher-consultations__status-hint {
+    font-size: 13px;
+    color: rgba(var(--color-shadow-rgb), 0.65);
+}
+
+.teacher-consultations__meta {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px 28px;
+}
+
+.teacher-consultations__meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.teacher-consultations__meta-item dt {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(var(--color-shadow-rgb), 0.55);
+}
+
+.teacher-consultations__meta-item dd {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-dark_1);
+}
+
+.teacher-consultations__slots {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.teacher-consultations__slot {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) minmax(180px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(var(--color-shadow-rgb), 0.12);
+    background: rgba(var(--color-shadow-rgb), 0.04);
+}
+
+.teacher-consultations__slot-main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.teacher-consultations__slot-time {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.teacher-consultations__slot-badge {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.teacher-consultations__slot-badge--upcoming {
+    background: rgba(var(--color-accent-rgb), 0.18);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-accent-rgb), 0.28);
+}
+
+.teacher-consultations__slot-badge--live {
+    background: rgba(246, 94, 70, 0.18);
+    color: rgb(196, 50, 28);
+    box-shadow: inset 0 0 0 2px rgba(246, 94, 70, 0.24);
+}
+
+.teacher-consultations__slot-badge--past {
+    background: rgba(var(--color-shadow-rgb), 0.12);
+    color: rgba(var(--color-shadow-rgb), 0.7);
+}
+
+.teacher-consultations__slot-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.teacher-consultations__slot-parent {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-dark_1);
+}
+
+.teacher-consultations__slot-hint {
+    font-size: 13px;
+    color: rgba(var(--color-shadow-rgb), 0.65);
+}
+
+.teacher-consultations__slot-code {
+    justify-self: end;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(var(--color-shadow-rgb), 0.6);
+}
+
+.teacher-consultations__slot--live {
+    border-color: rgba(246, 94, 70, 0.35);
+    background: rgba(246, 94, 70, 0.08);
+}
+
+.teacher-consultations__slot--upcoming {
+    border-color: rgba(var(--color-accent-rgb), 0.28);
+    background: rgba(var(--color-accent-rgb), 0.08);
+}
+
+.teacher-consultations__slot--past {
+    opacity: 0.85;
+}
+
+.teacher-consultations__no-slots {
+    margin: 0;
+    padding: 16px 20px;
+    border-radius: 14px;
+    background: rgba(var(--color-shadow-rgb), 0.05);
+    border: 2px dashed rgba(var(--color-shadow-rgb), 0.18);
+    font-size: 15px;
+    color: rgba(var(--color-shadow-rgb), 0.75);
+}
+
+.teacher-consultations__empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 32px;
+    border-radius: 20px;
+    border: 2px dashed rgba(var(--color-shadow-rgb), 0.2);
+    background: var(--color-white_4);
+}
+
+.teacher-consultations__empty-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.teacher-consultations__empty-text {
+    margin: 0;
+    font-size: 15px;
+    color: rgba(var(--color-shadow-rgb), 0.75);
+}
+
+@media (max-width: 900px) {
+    .teacher-consultations__slot {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+    }
+
+    .teacher-consultations__slot-code {
+        justify-self: flex-start;
+    }
+
+    .teacher-consultations__status {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .teacher-consultations__event-title {
+        font-size: 22px;
+    }
+
+    .teacher-consultations__event {
+        padding: 24px;
+    }
+}

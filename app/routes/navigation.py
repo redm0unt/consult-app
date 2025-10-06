@@ -20,7 +20,7 @@ PAGES_BY_ROLE: RolePagesMap = {
         {'label': 'Здания', 'endpoint': 'main.buildings', 'icon': 'img/nav/buildings.svg'},
     ],
     'teacher': [
-        {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
+        {'label': 'Консультации', 'endpoint': 'main.teacher_consultations', 'icon': 'img/nav/home.svg'},
         {'label': 'Мероприятия', 'endpoint': 'main.teacher_events', 'icon': 'img/nav/events.svg'},
     ],
     'parent': [
