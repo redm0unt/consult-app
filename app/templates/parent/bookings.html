@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/general/parent_slot_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/parent/bookings.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main parent-bookings">
+    <section class="parent-bookings__hero" aria-label="Информация">
+        <div class="parent-bookings__intro">
+            <h2 class="parent-bookings__title">Мои консультации</h2>
+            <p class="parent-bookings__subtitle">Выберите запись, чтобы посмотреть детали или отменить её при необходимости.</p>
+        </div>
+    </section>
+
+    {% if booking_cards %}
+    <section class="parent-bookings__list" aria-label="Забронированные консультации">
+        <div class="parent-bookings-grid">
+            {% for card in booking_cards %}
+            <article class="parent-booking-card">
+                <header class="parent-booking-card__header">
+                    <div class="parent-booking-card__titles">
+                        <p class="parent-booking-card__event-label">Мероприятие</p>
+                        <h3 class="parent-booking-card__event-title">{{ card.event_title }}</h3>
+                    </div>
+                    <div class="parent-booking-card__status">
+                        <span class="parent-booking-card__status-badge parent-booking-card__status-badge--{{ card.status_modifier }}">{{ card.status_label }}</span>
+                        {% if card.status_hint %}
+                        <span class="parent-booking-card__status-hint">{{ card.status_hint }}</span>
+                        {% endif %}
+                    </div>
+                </header>
+                <section class="parent-booking-card__details">
+                    <dl class="parent-booking-card__meta">
+                        <div class="parent-booking-card__meta-item">
+                            <dt>Дата</dt>
+                            <dd>{{ card.event_date_label }}</dd>
+                        </div>
+                        <div class="parent-booking-card__meta-item">
+                            <dt>Время мероприятия</dt>
+                            <dd>{{ card.event_time_label }}</dd>
+                        </div>
+                        <div class="parent-booking-card__meta-item">
+                            <dt>Время консультации</dt>
+                            <dd>{{ card.slot_time_label }}</dd>
+                        </div>
+                        <div class="parent-booking-card__meta-item">
+                            <dt>Учитель</dt>
+                            <dd>
+                                <span>{{ card.teacher_name }}</span>
+                                <span class="parent-booking-card__meta-sub">{{ card.teacher_email }}</span>
+                            </dd>
+                        </div>
+                        {% if card.location_label %}
+                        <div class="parent-booking-card__meta-item">
+                            <dt>Локация</dt>
+                            <dd>{{ card.location_label }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </section>
+                <footer class="parent-booking-card__footer">
+                    <form method="POST" class="parent-slot-form parent-booking-card__form" data-slot-form
+                        data-slot-state="mine"
+                        data-slot-action="cancel"
+                        data-slot-label="{{ card.slot_time_label }}"
+                        data-slot-teacher="{{ card.teacher_name }}"
+                        data-slot-teacher-email="{{ card.teacher_email }}">
+                        <input type="hidden" name="slot_id" value="{{ card.slot_id }}">
+                        <input type="hidden" name="action" value="cancel">
+                        <button type="submit" class="parent-booking-card__cancel"
+                            {% if not card.can_cancel %}disabled{% endif %}
+                            data-slot-button>
+                            Отменить запись
+                        </button>
+                    </form>
+                </footer>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <section class="parent-bookings__empty" role="note">
+        <h2 class="parent-bookings__empty-title">У вас пока нет активных записей</h2>
+        <p class="parent-bookings__empty-text">Выберите подходящее время консультации на странице «Главная», чтобы увидеть её здесь.</p>
+        <a class="parent-bookings__empty-link" href="{{ url_for('main.parent_events') }}">Перейти к доступным слотам</a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='js/pages/parent/events.js') }}"></script>
+{% include 'elements/parent_slot_modal.html' %}
+{% endblock %}

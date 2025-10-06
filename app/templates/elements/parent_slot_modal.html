@@ -1,0 +1,35 @@
+<template id="parent-slot-modal-template">
+    <div class="parent-slot-modal" data-slot-modal hidden>
+        <div class="parent-slot-modal__overlay" data-slot-modal-close tabindex="-1" aria-hidden="true"></div>
+        <div class="parent-slot-modal__dialog" role="dialog" aria-modal="true">
+            <header class="parent-slot-modal__header">
+                <h2 class="parent-slot-modal__title" data-slot-modal-title>Подтверждение записи</h2>
+                <button type="button" class="parent-slot-modal__close" data-slot-modal-close aria-label="Закрыть форму"></button>
+            </header>
+            <div class="parent-slot-modal__content">
+                <dl class="parent-slot-modal__details">
+                    <div class="parent-slot-modal__detail">
+                        <dt>Учитель</dt>
+                        <dd data-slot-modal-teacher></dd>
+                    </div>
+                    <div class="parent-slot-modal__detail">
+                        <dt>Время</dt>
+                        <dd data-slot-modal-time></dd>
+                    </div>
+                    <div class="parent-slot-modal__detail">
+                        <dt>Действие</dt>
+                        <dd data-slot-modal-action></dd>
+                    </div>
+                </dl>
+            </div>
+            <footer class="parent-slot-modal__footer">
+                <button type="button" class="parent-slot-modal__button parent-slot-modal__button--secondary" data-slot-modal-cancel>
+                    Отмена
+                </button>
+                <button type="button" class="parent-slot-modal__button parent-slot-modal__button--primary" data-slot-modal-confirm>
+                    Подтвердить
+                </button>
+            </footer>
+        </div>
+    </div>
+</template>

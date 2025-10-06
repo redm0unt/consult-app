@@ -161,8 +161,12 @@ def render_admin_dashboard() -> ResponseReturnValue:
 
 @bp.route('/')
 def index() -> ResponseReturnValue:
-    if current_user.is_authenticated and getattr(current_user, 'role', None) == 'admin':
-        return render_admin_dashboard()
+    if current_user.is_authenticated:
+        role = getattr(current_user, 'role', None)
+        if role == 'admin':
+            return render_admin_dashboard()
+        if role == 'parent':
+            return redirect(url_for('main.parent_events'))
     return render_template('base.html', pages=get_pages())
 
 

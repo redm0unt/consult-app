@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/general/parent_slot_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/parent/events.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main parent-events">
+    <section class="parent-events__hero" aria-label="Ближайшее мероприятие">
+        {% if event_view %}
+        <div class="parent-event-card">
+            <header class="parent-event-card__header">
+                <div>
+                    <p class="parent-event-card__label">Название</p>
+                    <h2 class="parent-event-card__title">{{ event_view.title }}</h2>
+                </div>
+                <div class="parent-event-card__datetime">
+                    <div class="parent-event-card__meta">
+                        <span class="parent-event-card__meta-label">Дата</span>
+                        <span class="parent-event-card__meta-value">{{ event_view.date_label }}</span>
+                    </div>
+                    <div class="parent-event-card__meta">
+                        <span class="parent-event-card__meta-label">Время</span>
+                        <span class="parent-event-card__meta-value">{{ event_view.time_label }}</span>
+                    </div>
+                </div>
+            </header>
+            <footer class="parent-event-card__footer">
+                {% if not event_view.can_book %}
+                <span class="parent-event-card__status parent-event-card__status--ended">Мероприятие завершилось</span>
+                {% elif event_view.is_ongoing %}
+                <span class="parent-event-card__status parent-event-card__status--live">Идёт сейчас</span>
+                {% else %}
+                <span class="parent-event-card__status parent-event-card__status--upcoming">Запись открыта</span>
+                {% endif %}
+            </footer>
+        </div>
+        {% else %}
+        <div class="parent-event-empty" role="note">
+            <h2>Ближайших консультаций пока нет</h2>
+            <p>Когда школа создаст мероприятие, вы сможете выбрать подходящее время встречи с учителем.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    {% if event_view and teachers %}
+    <section class="parent-events__teachers" aria-label="Учителя">
+        <h2 class="parent-events__teachers-title">Выберите учителя и слот</h2>
+        <div class="parent-teacher-grid">
+            {% for teacher in teachers %}
+            <article class="parent-teacher-card" data-teacher-card>
+                <header class="parent-teacher-card__header">
+                    <p class="parent-teacher-card__label">ФИО</p>
+                    <h3 class="parent-teacher-card__name">{{ teacher.name }}</h3>
+                    <p class="parent-teacher-card__email">{{ teacher.email }}</p>
+                </header>
+
+                {% if teacher.slots %}
+                <div class="parent-teacher-card__slots" role="list">
+                    {% for slot in teacher.slots %}
+                    <form method="POST" class="parent-slot-form" data-slot-form role="listitem"
+                        data-slot-state="{{ slot.state }}"
+                        data-slot-label="{{ slot.label }}"
+                        data-slot-teacher="{{ teacher.name }}"
+                        data-slot-teacher-email="{{ teacher.email }}"
+                        data-slot-id="{{ slot.slot_id or '' }}">
+                        <input type="hidden" name="teacher_id" value="{{ teacher.teacher_id }}">
+                        <input type="hidden" name="slot_index" value="{{ slot.index }}">
+                        <input type="hidden" name="slot_id" value="{{ slot.slot_id or '' }}">
+                        <input type="hidden" name="action" value="{% if slot.state == 'mine' %}cancel{% else %}book{% endif %}">
+                        <button type="submit" class="parent-slot parent-slot--{{ slot.state }}"
+                            data-slot-button
+                            data-slot-action="{% if slot.state == 'mine' %}cancel{% else %}book{% endif %}"
+                            {% if slot.disabled or not event_view.can_book %}disabled{% endif %}
+                            {% if slot.state == 'mine' %}aria-pressed="true"{% endif %}>
+                            <span class="parent-slot__time">{{ slot.label }}</span>
+                            {% if slot.state == 'mine' %}
+                            <span class="parent-slot__badge">Отменить запись</span>
+                            {% elif slot.state == 'taken' %}
+                            <span class="parent-slot__badge">Занято</span>
+                            {% elif slot.state == 'closed' %}
+                            <span class="parent-slot__badge">Поздно записываться</span>
+                            {% endif %}
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="parent-teacher-card__empty">Для этого учителя пока нет доступных слотов.</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% elif event_view and not teachers %}
+    <section class="parent-events__empty" role="note">
+        <p>Для этого мероприятия пока не назначены учителя. Пожалуйста, зайдите позже.</p>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='js/pages/parent/events.js') }}"></script>
+{% include 'elements/parent_slot_modal.html' %}
+{% endblock %}

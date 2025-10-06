@@ -7,6 +7,7 @@ from .school_repository import SchoolRepository
 from .user_repository import UserRepository
 from .building_repository import BuildingRepository
 from .event_repository import EventRepository
+from .slot_repository import SlotRepository
 
 RepositoryMap = Dict[str, Type[BaseRepository]]
 
@@ -15,6 +16,7 @@ _REPOSITORIES: RepositoryMap = {
     "schools": SchoolRepository,
     "buildings": BuildingRepository,
     "events": EventRepository,
+    "slots": SlotRepository,
 }
 
 
@@ -33,5 +35,6 @@ __all__ = [
     "UserRepository",
     "BuildingRepository",
     "EventRepository",
+    "SlotRepository",
     "get_repository",
 ]

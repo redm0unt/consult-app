@@ -1,0 +1,324 @@
+.parent-events {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.parent-events__hero,
+.parent-events__teachers,
+.parent-events__empty {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.parent-event-card {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 28px 32px;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(var(--color-accent-rgb), 0.14), rgba(var(--color-accent-rgb), 0.05));
+    border: 2px solid rgba(var(--color-accent-rgb), 0.22);
+    box-shadow: 0 20px 44px rgba(var(--color-shadow-rgb), 0.16);
+}
+
+.parent-event-card__header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.parent-event-card__label {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(var(--color-shadow-rgb), 0.6);
+}
+
+.parent-event-card__title {
+    margin: 0;
+    font-size: clamp(24px, 2.6vw, 30px);
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.parent-event-card__datetime {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.parent-event-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.parent-event-card__meta-label {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(var(--color-shadow-rgb), 0.65);
+}
+
+.parent-event-card__meta-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.parent-event-card__footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.parent-event-card__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.parent-event-card__status--upcoming {
+    background: rgba(var(--color-deep-green-rgb, 46, 107, 85), 0.12);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-accent-rgb), 0.25);
+}
+
+.parent-event-card__status--live {
+    background: rgba(var(--color-accent-rgb), 0.12);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-accent-rgb), 0.3);
+}
+
+.parent-event-card__status--ended {
+    background: rgba(var(--color-shadow-rgb), 0.12);
+    color: rgba(var(--color-shadow-rgb), 0.7);
+}
+
+.parent-event-empty {
+    border-radius: 18px;
+    padding: 36px;
+    background: var(--color-white_4);
+    border: 2px dashed rgba(var(--color-shadow-rgb), 0.2);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.parent-event-empty h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.parent-event-empty p {
+    margin: 0;
+    font-size: 16px;
+    color: rgba(var(--color-shadow-rgb), 0.75);
+}
+
+.parent-events__teachers-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.parent-teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 22px;
+}
+
+.parent-teacher-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    border-radius: 18px;
+    background: var(--color-white_4);
+    border: 3px solid var(--color-transparent-lines);
+    box-shadow: 0 18px 36px rgba(var(--color-shadow-rgb), 0.12);
+}
+
+.parent-teacher-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.parent-teacher-card__label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(var(--color-shadow-rgb), 0.6);
+}
+
+.parent-teacher-card__name {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-dark_1);
+}
+
+.parent-teacher-card__email {
+    margin: 0;
+    font-size: 15px;
+    color: rgba(var(--color-shadow-rgb), 0.7);
+}
+
+.parent-teacher-card__slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.parent-slot-form {
+    margin: 0;
+}
+
+.parent-slot {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: none;
+    min-width: 112px;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.parent-slot:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(var(--color-accent-rgb), 0.18);
+}
+
+.parent-slot:focus-visible {
+    outline: 3px solid rgba(var(--color-accent-rgb), 0.65);
+    outline-offset: 3px;
+}
+
+.parent-slot--available {
+    background: rgba(var(--color-accent-rgb), 0.14);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-accent-rgb), 0.25);
+}
+
+.parent-slot--mine {
+    background: rgba(70, 180, 120, 0.16);
+    color: var(--color-deep-green_2);
+    box-shadow: inset 0 0 0 2px rgba(70, 180, 120, 0.32);
+}
+
+.parent-slot--taken {
+    background: rgba(var(--color-shadow-rgb), 0.16);
+    color: rgba(var(--color-shadow-rgb), 0.75);
+    cursor: not-allowed;
+}
+
+.parent-slot--closed {
+    background: rgba(var(--color-shadow-rgb), 0.1);
+    color: rgba(var(--color-shadow-rgb), 0.6);
+    cursor: not-allowed;
+}
+
+.parent-slot--pending {
+    position: relative;
+    background: rgba(var(--color-accent-rgb), 0.18);
+    color: var(--color-deep-green_2);
+}
+
+.parent-slot--pending::after {
+    content: '⏳';
+    position: absolute;
+    right: 12px;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.parent-slot:disabled {
+    transform: none;
+    box-shadow: none;
+    opacity: 0.8;
+}
+
+.parent-slot__time {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.parent-slot__badge {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.parent-slot--mine .parent-slot__badge {
+    background: rgba(var(--color-deep-green-rgb, 46, 107, 85), 0.16);
+    color: var(--color-deep-green_2);
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.parent-teacher-card__empty {
+    margin: 0;
+    font-size: 15px;
+    color: rgba(var(--color-shadow-rgb), 0.7);
+}
+
+.parent-events__empty {
+    padding: 28px;
+    border-radius: 18px;
+    background: var(--color-white_4);
+    border: 2px dashed rgba(var(--color-shadow-rgb), 0.2);
+    font-size: 16px;
+    color: rgba(var(--color-shadow-rgb), 0.75);
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .parent-event-card__header {
+        flex-direction: column;
+    }
+
+    .parent-event-card__footer {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .parent-event-card {
+        padding: 24px 22px;
+    }
+
+    .parent-slot {
+        width: 100%;
+    }
+
+    .parent-teacher-grid {
+        grid-template-columns: 1fr;
+    }
+}

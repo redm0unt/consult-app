@@ -1,5 +1,6 @@
 {% from 'elements/header_macros.html' import preconnect_scripts, critical_general_styles, critical_base_styles %}
 {% from 'elements/render_header_macro.html' import render_header %}
+{% from 'elements/general_elements.html' import render_page_icon %}
 
 <!doctype html>
 <html lang="ru">
@@ -33,7 +34,7 @@
                         {% for page in pages %}
                             <li class="sidebar-item {{ 'current-page' if request.endpoint == page.endpoint }}">
                                 <a href="{{ url_for(page.endpoint) }}" class="sidebar-item-link">
-                                    <img src="{{ url_for('static', filename=page.icon) }}" alt="" class="sidebar-item-link-icon" role="presentation">
+                                    {{ render_page_icon(page.icon) }}
                                     <span>{{ page.label }}</span>
                                 </a>
                             </li>
