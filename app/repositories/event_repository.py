@@ -5,7 +5,7 @@ from sqlalchemy import case, select
 from sqlalchemy.orm import selectinload
 
 from .base_repository import BaseRepository
-from ..models import BuildingBooking, Event, EventStatus, Teacher
+from ..models import BuildingBooking, Event, EventStatus, Teacher, event_teachers_table
 
 
 class EventRepository(BaseRepository[Event]):
@@ -26,6 +26,28 @@ class EventRepository(BaseRepository[Event]):
         stmt = (
             select(Event)
             .where(Event.school_id == school_id)
+            .options(
+                selectinload(Event.slots),
+                selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
+                selectinload(Event.teachers),
+            )
+            .order_by(status_order, Event.start_time.asc(), Event.event_id.desc())
+        )
+        result = self.session.execute(stmt)
+        return list(result.scalars().unique())
+
+    def get_for_teacher(self, teacher_id: int) -> list[Event]:
+        status_order = case(
+            (Event.status == EventStatus.ongoing, 0),
+            (Event.status == EventStatus.scheduled, 1),
+            (Event.status == EventStatus.completed, 2),
+            (Event.status == EventStatus.cancelled, 3),
+            else_=4,
+        )
+        stmt = (
+            select(Event)
+            .join(event_teachers_table, event_teachers_table.c.event_id == Event.event_id)
+            .where(event_teachers_table.c.teacher_id == teacher_id)
             .options(
                 selectinload(Event.slots),
                 selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
