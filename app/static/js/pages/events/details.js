@@ -19,6 +19,8 @@ function setupEventsDetails(root = document) {
     const durationEl = qs(modal, '[data-event-details-duration]');
     const consultationDurationHighlight = qs(modal, '[data-event-details-highlight-consultation-duration]');
     const consultationDurationEl = qs(modal, '[data-event-details-consultation-duration]');
+    const teachersSection = qs(modal, '[data-event-details-teachers-section]');
+    const teachersList = qs(modal, '[data-event-details-teachers]');
     const metaContainer = qs(modal, '[data-event-details-meta]');
     const statsSection = qs(modal, '[data-event-details-stats-section]');
     const statsContainer = qs(modal, '[data-event-details-stats]');
@@ -167,6 +169,24 @@ function setupEventsDetails(root = document) {
 
         if (consultationDurationHighlight) {
             consultationDurationHighlight.style.display = detail.consultationDurationMinutes != null ? '' : 'none';
+        }
+
+        if (teachersList && teachersSection) {
+            while (teachersList.firstChild) {
+                teachersList.removeChild(teachersList.firstChild);
+            }
+            const teacherNames = Array.isArray(detail.teacherNames) ? detail.teacherNames : [];
+            if (!teacherNames.length) {
+                teachersSection.style.display = 'none';
+            } else {
+                teachersSection.style.display = '';
+                teacherNames.forEach((teacherName) => {
+                    const item = document.createElement('li');
+                    item.className = 'event-details-modal__teacher-item';
+                    item.textContent = teacherName;
+                    teachersList.appendChild(item);
+                });
+            }
         }
 
         renderMeta(detail.meta);

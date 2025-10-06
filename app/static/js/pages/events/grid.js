@@ -27,6 +27,10 @@ function setupEventsGrid({ root = document, modalManager = null } = {}) {
             const consultations = actionButton.dataset.eventConsultations || '0';
             const consultationDuration = actionButton.dataset.eventConsultationDuration || '';
             const durationMinutes = actionButton.dataset.eventDurationMinutes || '';
+            const teachersRaw = actionButton.dataset.eventTeachers || '';
+            const teacherIds = teachersRaw
+                ? teachersRaw.split(',').map((value) => value.trim()).filter(Boolean)
+                : [];
             modalManager.open('update', {
                 eventId,
                 name,
@@ -35,6 +39,8 @@ function setupEventsGrid({ root = document, modalManager = null } = {}) {
                 durationMinutes,
                 start,
                 end,
+                teacherIds,
+                step: 'basic',
             });
             return;
         }

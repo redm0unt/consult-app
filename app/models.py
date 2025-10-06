@@ -9,7 +9,19 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, MetaData, Enum, Computed, TIMESTAMP
+from sqlalchemy import (
+    String,
+    ForeignKey,
+    DateTime,
+    Text,
+    Integer,
+    MetaData,
+    Enum,
+    Computed,
+    TIMESTAMP,
+    Table,
+    Column,
+)
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention={
@@ -21,6 +33,23 @@ class Base(DeclarativeBase):
     })
 
 db = SQLAlchemy(model_class=Base)
+
+
+event_teachers_table = Table(
+    'event_teachers',
+    Base.metadata,
+    Column(
+        'event_id',
+        ForeignKey('events.event_id', ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        'teacher_id',
+        ForeignKey('teachers.teacher_id', ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    ),
+    Column('created_at', TIMESTAMP, server_default=sqlalchemy.sql.func.now(), nullable=False),
+)
 
 
 class EventStatus(enum.Enum):
@@ -95,6 +124,12 @@ class Event(Base):
     school: Mapped["School"] = relationship("School", back_populates="events")
     slots: Mapped[List["Slot"]] = relationship("Slot", back_populates="event")
     building_bookings: Mapped[List["BuildingBooking"]] = relationship("BuildingBooking", back_populates="event")
+    teachers: Mapped[List["Teacher"]] = relationship(
+        "Teacher",
+        secondary=event_teachers_table,
+        back_populates="events",
+        lazy='selectin',
+    )
 
     def __repr__(self):
         return (
@@ -161,6 +196,12 @@ class Teacher(User):
 
     slots: Mapped[List["Slot"]] = relationship("Slot", back_populates="teacher")
     building_bookings: Mapped[List["BuildingBooking"]] = relationship("BuildingBooking", back_populates="teacher")
+    events: Mapped[List["Event"]] = relationship(
+        "Event",
+        secondary=event_teachers_table,
+        back_populates="teachers",
+        lazy='selectin',
+    )
 
     def __repr__(self):
         return f'<Teacher {self.email}>'

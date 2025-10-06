@@ -33,6 +33,9 @@
             'consultations': event.consultations_count,
             'durationMinutes': event.duration_minutes,
             'consultationDurationMinutes': event.consultation_duration_minutes,
+            'teacherIds': event.teacher_ids,
+            'teacherNames': event.teacher_names,
+            'teacherCount': event.teacher_names | length,
             'meta': event.meta_items,
             'stats': event.stats,
             'bookings': event.bookings
@@ -123,6 +126,10 @@
                     <span class="event-details-modal__highlight-label">консультация, мин</span>
                 </div>
             </section>
+            <section class="event-details-modal__section event-details-modal__section--teachers" data-event-details-teachers-section>
+                <h3 class="event-details-modal__section-label">Учителя</h3>
+                <ul class="event-details-modal__teachers-list" data-event-details-teachers></ul>
+            </section>
             <section class="event-details-modal__section">
                 <h3 class="event-details-modal__section-label">Ключевые отметки</h3>
                 <div class="event-details-modal__meta" data-event-details-meta></div>
@@ -143,6 +150,15 @@
 
     {% if can_manage_events %}
     {% set event_form = event_form_data or {} %}
+    {% set selected_teacher_ids = event_form.get('selected_teacher_ids', []) %}
+    {% if selected_teacher_ids is string %}
+        {% set selected_teacher_ids = [selected_teacher_ids] %}
+    {% elif selected_teacher_ids is not iterable %}
+        {% set selected_teacher_ids = [selected_teacher_ids] %}
+    {% endif %}
+    {% set selected_teacher_ids = selected_teacher_ids | list %}
+    {% set current_step_value = event_form.get('current_step', 'basic') %}
+    {% set all_teachers_selected = (teacher_options | length > 0) and (selected_teacher_ids | length >= teacher_options | length) %}
     {% set event_modal_config = {
         'prefix': 'events',
         'show': show_event_form,
@@ -156,29 +172,99 @@
         'close_label': 'Закрыть форму',
         'hidden_fields': [
             {'name': 'form_type', 'value': event_form_mode or 'create'},
-            {'name': 'event_id', 'value': event_form_event_id or ''}
+            {'name': 'event_id', 'value': event_form_event_id or ''},
+            {'name': 'current_step', 'value': event_form.get('current_step', 'basic')},
         ]
     } %}
     {% call management_modal(event_modal_config) %}
-        <div class="input-fields-container__row">
-            <label class="input-fields-container__row-label" for="event_name">Название</label>
-            <input id="event_name" name="name" type="text" class="input-fields-container__row-input" value="{{ event_form.get('name', '') }}" maxlength="120" required>
+        <div class="events-modal__stepper" data-event-stepper data-event-initial-step="{{ current_step_value }}">
+            <button type="button" class="events-modal__step" data-event-step-button data-event-step-value="basic">
+                <span class="events-modal__step-index">1</span>
+                <span class="events-modal__step-label">Основное</span>
+            </button>
+            <button type="button" class="events-modal__step" data-event-step-button data-event-step-value="teachers">
+                <span class="events-modal__step-index">2</span>
+                <span class="events-modal__step-label">Учителя</span>
+            </button>
         </div>
-        <div class="input-fields-container__row">
-            <label class="input-fields-container__row-label" for="event_start_time">Начало</label>
-            <input id="event_start_time" name="start_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('start_time', '') }}" required>
+
+        <div class="events-modal__stages" data-event-stages data-event-initial-step="{{ current_step_value }}">
+            <section class="events-modal__stage" data-event-stage="basic" aria-labelledby="events-modal-step-basic-title">
+                <header class="events-modal__stage-header">
+                    <div>
+                        <h3 id="events-modal-step-basic-title" class="events-modal__stage-title">Основная информация</h3>
+                        <p class="events-modal__stage-hint">Заполните ключевые параметры мероприятия</p>
+                    </div>
+                </header>
+                <div class="events-modal__stage-body">
+                    <div class="input-fields-container__row">
+                        <label class="input-fields-container__row-label" for="event_name">Название</label>
+                        <input id="event_name" name="name" type="text" class="input-fields-container__row-input" value="{{ event_form.get('name', '') }}" maxlength="120" required>
+                    </div>
+                    <div class="input-fields-container__row">
+                        <label class="input-fields-container__row-label" for="event_start_time">Начало</label>
+                        <input id="event_start_time" name="start_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('start_time', '') }}" required>
+                    </div>
+                    <div class="input-fields-container__row">
+                        <label class="input-fields-container__row-label" for="event_consultations_count">Количество консультаций</label>
+                        <input id="event_consultations_count" name="consultations_count" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultations_count', '1') }}" min="1" step="1" required>
+                    </div>
+                    <div class="input-fields-container__row">
+                        <label class="input-fields-container__row-label" for="event_consultation_duration">Длительность консультации, мин</label>
+                        <input id="event_consultation_duration" name="consultation_duration_minutes" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultation_duration_minutes', '15') }}" min="1" step="1" required>
+                    </div>
+                    <div class="input-fields-container__row input-fields-container__row--computed">
+                        <span class="input-fields-container__row-label">Окончание</span>
+                        <output id="event_end_preview" class="input-fields-container__computed" data-event-end-preview>{{ event_form.get('calculated_end_time', '') }}</output>
+                    </div>
+                </div>
+            </section>
+            <section class="events-modal__stage" data-event-stage="teachers" aria-labelledby="events-modal-step-teachers-title">
+                <header class="events-modal__stage-header">
+                    <div>
+                        <h3 id="events-modal-step-teachers-title" class="events-modal__stage-title">Учителя мероприятия</h3>
+                        <p class="events-modal__stage-hint">Выберите педагогов, которые будут участвовать</p>
+                    </div>
+                    {% if teacher_options | length > 0 %}
+                    <div class="events-modal__teachers-actions">
+                        <label class="events-modal__select-all">
+                            <input type="checkbox" class="events-modal__select-all-checkbox" data-event-teachers-select-all {% if all_teachers_selected %}checked{% endif %}>
+                            <span>Выбрать всех</span>
+                        </label>
+                        <span class="events-modal__selected-counter">Выбрано: <span data-event-teachers-count>{{ selected_teacher_ids | length }}</span></span>
+                    </div>
+                    {% endif %}
+                </header>
+                <div class="events-modal__stage-body events-modal__stage-body--teachers">
+                    {% if teacher_options | length > 0 %}
+                    <div class="events-modal__teachers-list" data-event-teachers-list role="group" aria-label="Учителя школы">
+                        {% for teacher in teacher_options %}
+                            {% set teacher_id_str = teacher.id | string %}
+                            {% set is_checked = teacher_id_str in selected_teacher_ids %}
+                            <label class="events-modal__teacher" data-event-teacher-item>
+                                <input type="checkbox"
+                                       class="events-modal__teacher-checkbox"
+                                       name="teacher_ids"
+                                       value="{{ teacher.id }}"
+                                       data-event-teacher-checkbox
+                                       {% if is_checked %}checked{% endif %}>
+                                <span class="events-modal__teacher-name">{{ teacher.name }}</span>
+                                <span class="events-modal__teacher-email">{{ teacher.email }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="events-modal__teachers-empty">В вашей школе пока нет учителей. Добавьте их позже в разделе «Учителя», чтобы назначать на мероприятие.</p>
+                    {% endif %}
+                </div>
+            </section>
         </div>
-        <div class="input-fields-container__row">
-            <label class="input-fields-container__row-label" for="event_consultations_count">Количество консультаций</label>
-            <input id="event_consultations_count" name="consultations_count" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultations_count', '0') }}" min="1" step="1" required>
-        </div>
-        <div class="input-fields-container__row">
-            <label class="input-fields-container__row-label" for="event_consultation_duration">Длительность консультации, мин</label>
-            <input id="event_consultation_duration" name="consultation_duration_minutes" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultation_duration_minutes', '15') }}" min="1" step="1" required>
-        </div>
-        <div class="input-fields-container__row input-fields-container__row--computed">
-            <span class="input-fields-container__row-label">Окончание</span>
-            <output id="event_end_preview" class="input-fields-container__computed" data-event-end-preview>{{ event_form.get('calculated_end_time', '') }}</output>
+
+        <div class="events-modal__navigation" data-event-navigation>
+            <button type="button" class="button button--outline events-modal__nav-button" data-event-step-prev>Назад</button>
+            <div class="events-modal__navigation-actions">
+                <button type="button" class="button main-button events-modal__nav-button" data-event-step-next>Далее</button>
+            </div>
         </div>
     {% endcall %}
     {{ management_delete_form('events', 'event_id') }}

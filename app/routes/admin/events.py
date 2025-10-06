@@ -8,10 +8,11 @@ from flask import abort, current_app, flash, redirect, render_template, request,
 from flask.typing import ResponseReturnValue
 from flask_login import current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select
 
 from app.auth import check_rights
 from app.auth.policies import EventsPolicy
-from app.models import Event, EventStatus, SlotStatus
+from app.models import Event, EventStatus, SlotStatus, Teacher, db
 from app.repositories import EventRepository, get_repository
 from app.routes import bp, get_pages
 
@@ -53,6 +54,8 @@ class EventViewModel:
     consultations_count: int
     duration_minutes: int
     consultation_duration_minutes: int
+    teacher_ids: tuple[int, ...]
+    teacher_names: tuple[str, ...]
     menu_config: Optional[dict[str, object]]
 
 
@@ -117,7 +120,9 @@ def build_meta_items(event: Event) -> tuple[MetaItem, ...]:
 def build_stats(event: Event) -> tuple[StatItem, ...]:
     active_slots = [slot for slot in event.slots if slot.status != SlotStatus.cancelled]
     slot_count = len(active_slots)
-    teacher_count = len({slot.teacher_id for slot in active_slots if slot.teacher_id})
+    teacher_count = len(getattr(event, 'teachers', []) or [])
+    if teacher_count == 0:
+        teacher_count = len({slot.teacher_id for slot in active_slots if slot.teacher_id})
     parent_count = len({slot.parent_id for slot in active_slots if slot.parent_id})
     building_count = len({booking.building_id for booking in event.building_bookings})
     classroom_count = len({
@@ -169,6 +174,7 @@ def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Opti
         if getattr(event, 'duration_minutes', None) is not None
         else int((event.end_time - event.start_time).total_seconds() // 60)
     )
+    teacher_ids = [teacher.teacher_id for teacher in getattr(event, 'teachers', [])]
     if can_edit:
         items.append(
             {
@@ -182,6 +188,7 @@ def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Opti
                     'data-event-consultation-duration': str(event.consultation_duration_minutes),
                     'data-event-end': format_input_datetime(event.end_time),
                     'data-event-duration-minutes': str(duration_minutes),
+                    'data-event-teachers': ','.join(str(teacher_id) for teacher_id in teacher_ids),
                 },
             }
         )
@@ -214,6 +221,9 @@ def build_event_view_model(event: Event, *, can_edit: bool, can_delete: bool) ->
         if getattr(event, 'duration_minutes', None) is not None
         else int((event.end_time - event.start_time).total_seconds() // 60)
     )
+    teachers = tuple(getattr(event, 'teachers', []) or ())
+    teacher_ids = tuple(teacher.teacher_id for teacher in teachers)
+    teacher_names = tuple(teacher.full_name or teacher.email for teacher in teachers)
     return EventViewModel(
         event_id=event.event_id,
         title_label='Мероприятие',
@@ -229,6 +239,8 @@ def build_event_view_model(event: Event, *, can_edit: bool, can_delete: bool) ->
         consultations_count=event.consultations_count or 0,
         duration_minutes=duration_minutes,
         consultation_duration_minutes=event.consultation_duration_minutes or 0,
+        teacher_ids=teacher_ids,
+        teacher_names=teacher_names,
         menu_config=build_menu_config(event, can_edit=can_edit, can_delete=can_delete),
     )
 
@@ -248,6 +260,9 @@ def matches_search(view_model: EventViewModel, query_lower: str) -> bool:
         return True
     if query_lower and query_lower in str(view_model.consultation_duration_minutes):
         return True
+    for teacher_name in view_model.teacher_names:
+        if query_lower in teacher_name.lower():
+            return True
 
     for meta in view_model.meta_items:
         if query_lower in meta.label.lower() or query_lower in meta.value.lower():
@@ -279,7 +294,27 @@ def events() -> ResponseReturnValue:
     school = current_user.school
     search_query = (request.args.get('q') or '').strip()
 
-    form_data: dict[str, str] = {}
+    teachers: list[Teacher] = []
+    teacher_map: dict[int, Teacher] = {}
+    teacher_options: list[dict[str, str]] = []
+    if school:
+        teacher_stmt = (
+            select(Teacher)
+            .where(Teacher.school_id == school.school_id)
+            .order_by(Teacher.last_name.asc(), Teacher.first_name.asc(), Teacher.middle_name.asc())
+        )
+        teachers = db.session.execute(teacher_stmt).scalars().all()
+        teacher_map = {teacher.teacher_id: teacher for teacher in teachers}
+        teacher_options = [
+            {
+                'id': teacher.teacher_id,
+                'name': teacher.full_name,
+                'email': teacher.email,
+            }
+            for teacher in teachers
+        ]
+
+    form_data: dict[str, object] = {}
     form_mode = 'create'
     form_event_id: Optional[int] = None
     show_event_form = False
@@ -315,6 +350,29 @@ def events() -> ResponseReturnValue:
         name_value = (request.form.get('name') or '').strip()
         consultations_value_str = (request.form.get('consultations_count') or '').strip()
         consultation_duration_value_str = (request.form.get('consultation_duration_minutes') or '').strip()
+        current_step_raw = (request.form.get('current_step') or 'basic').strip().lower()
+        current_step_value = 'teachers' if current_step_raw == 'teachers' else 'basic'
+
+        teacher_ids_raw = request.form.getlist('teacher_ids')
+        selected_teacher_ids_set: set[int] = set()
+        selected_teacher_ids_view: list[str] = []
+        invalid_teacher_values: list[str] = []
+        unknown_teacher_ids: list[str] = []
+
+        for raw_teacher_id in teacher_ids_raw:
+            cleaned = raw_teacher_id.strip()
+            if not cleaned:
+                continue
+            if not cleaned.isdigit():
+                invalid_teacher_values.append(cleaned)
+                continue
+            teacher_id = int(cleaned)
+            if teacher_id not in teacher_map:
+                unknown_teacher_ids.append(cleaned)
+                continue
+            if teacher_id not in selected_teacher_ids_set:
+                selected_teacher_ids_set.add(teacher_id)
+                selected_teacher_ids_view.append(str(teacher_id))
 
         form_data = {
             'start_time': start_value,
@@ -322,9 +380,22 @@ def events() -> ResponseReturnValue:
             'consultations_count': consultations_value_str,
             'consultation_duration_minutes': consultation_duration_value_str,
             'calculated_end_time': '',
+            'selected_teacher_ids': selected_teacher_ids_view,
+            'current_step': current_step_value,
         }
 
         errors: list[str] = []
+
+        missing_teacher_selection = bool(teacher_map) and not selected_teacher_ids_set
+
+        if invalid_teacher_values:
+            errors.append('Переданы некорректные значения учителей — обновите страницу и попробуйте снова')
+            current_step_value = 'teachers'
+            form_data['current_step'] = current_step_value
+        if unknown_teacher_ids:
+            errors.append('Выбранные учителя не найдены или не относятся к вашей школе')
+            current_step_value = 'teachers'
+            form_data['current_step'] = current_step_value
 
         if not name_value:
             errors.append('Укажите название мероприятия')
@@ -382,6 +453,21 @@ def events() -> ResponseReturnValue:
                 event = event_repository.get_by_id(event_id)
                 if not event or not school or event.school_id != school.school_id:
                     errors.append('Мероприятие не найдено или не относится к вашей школе')
+                else:
+                    if not selected_teacher_ids_set and getattr(event, 'teachers', None):
+                        existing_teacher_ids = [
+                            teacher.teacher_id
+                            for teacher in event.teachers
+                            if teacher.teacher_id in teacher_map
+                        ]
+                        selected_teacher_ids_set = set(existing_teacher_ids)
+                        selected_teacher_ids_view = [str(teacher_id) for teacher_id in existing_teacher_ids]
+                        form_data['selected_teacher_ids'] = selected_teacher_ids_view
+
+        if missing_teacher_selection and not selected_teacher_ids_set:
+            errors.append('Выберите хотя бы одного учителя для мероприятия')
+            current_step_value = 'teachers'
+            form_data['current_step'] = current_step_value
 
         if start_dt and end_dt:
             form_data['calculated_end_time'] = format_event_period(start_dt, end_dt)
@@ -408,6 +494,7 @@ def events() -> ResponseReturnValue:
                             end_time=end_dt,
                             consultations_count=consultations_count_safe,
                             consultation_duration_minutes=consultation_duration_safe,
+                            teacher_ids=selected_teacher_ids_set,
                         )
                     elif form_type == 'update' and event:
                         event_repository.update(
@@ -417,6 +504,7 @@ def events() -> ResponseReturnValue:
                             end_time=end_dt,
                             consultations_count=consultations_count_value,
                             consultation_duration_minutes=consultation_duration_value,
+                            teacher_ids=selected_teacher_ids_set,
                         )
                 except SQLAlchemyError:
                     event_repository.rollback()
@@ -454,6 +542,8 @@ def events() -> ResponseReturnValue:
             'consultations_count': '1',
             'consultation_duration_minutes': '15',
             'calculated_end_time': '',
+            'selected_teacher_ids': [str(teacher.teacher_id) for teacher in teachers],
+            'current_step': 'basic',
         }
 
     return render_template(
@@ -467,4 +557,5 @@ def events() -> ResponseReturnValue:
         show_event_form=show_event_form,
         event_form_mode=form_mode,
         event_form_event_id=form_event_id,
+        teacher_options=teacher_options,
     )
