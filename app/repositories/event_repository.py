@@ -1,0 +1,113 @@
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import case, select
+from sqlalchemy.orm import selectinload
+
+from .base_repository import BaseRepository
+from ..models import BuildingBooking, Event, EventStatus
+
+
+class EventRepository(BaseRepository[Event]):
+    model = Event
+    default_order_by = (Event.start_time.asc(), Event.event_id.desc())
+
+    def get_by_id(self, event_id: int) -> Optional[Event]:
+        return self._get_one(event_id=event_id)
+
+    def get_for_school(self, school_id: int) -> list[Event]:
+        status_order = case(
+            (Event.status == EventStatus.ongoing, 0),
+            (Event.status == EventStatus.scheduled, 1),
+            (Event.status == EventStatus.completed, 2),
+            (Event.status == EventStatus.cancelled, 3),
+            else_=4,
+        )
+        stmt = (
+            select(Event)
+            .where(Event.school_id == school_id)
+            .options(
+                selectinload(Event.slots),
+                selectinload(Event.building_bookings).selectinload(BuildingBooking.building),
+            )
+            .order_by(status_order, Event.start_time.asc(), Event.event_id.desc())
+        )
+        result = self.session.execute(stmt)
+        return list(result.scalars().unique())
+
+    def create(
+        self,
+        *,
+        school_id: int,
+        start_time: datetime,
+        end_time: datetime,
+        status: EventStatus = EventStatus.scheduled,
+    ) -> Event:
+        event = Event(
+            school_id=school_id,
+            start_time=start_time,
+            end_time=end_time,
+            status=status,
+        )
+        self.add(event)
+        self.commit()
+        return event
+
+    def update(
+        self,
+        event_id: int,
+        *,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> Optional[Event]:
+        event = self.get_by_id(event_id)
+        if not event:
+            return None
+
+        updated = False
+        if start_time is not None:
+            event.start_time = start_time
+            updated = True
+        if end_time is not None:
+            event.end_time = end_time
+            updated = True
+        if updated:
+            self.commit()
+
+        return event
+
+    def delete(self, event_id: int) -> bool:
+        event = self.get_by_id(event_id)
+        if not event:
+            return False
+        self.session.delete(event)
+        self.commit()
+        return True
+
+    def refresh_statuses_for_school(self, school_id: int, *, reference_time: Optional[datetime] = None) -> None:
+        now = reference_time or datetime.now()
+        stmt = select(Event).where(Event.school_id == school_id)
+        result = self.session.execute(stmt)
+        events = list(result.scalars())
+
+        updated = False
+        for event in events:
+            if event.status == EventStatus.cancelled:
+                continue
+
+            if event.end_time <= now:
+                desired_status = EventStatus.completed
+            elif event.start_time <= now:
+                desired_status = EventStatus.ongoing
+            else:
+                desired_status = EventStatus.scheduled
+
+            if event.status != desired_status:
+                event.status = desired_status
+                updated = True
+
+        if updated:
+            self.commit()
+
+
+__all__ = ["EventRepository"]

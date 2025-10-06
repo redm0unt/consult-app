@@ -15,7 +15,7 @@ RolePagesMap = Mapping[str, List[PageConfig]]
 PAGES_BY_ROLE: RolePagesMap = {
     'admin': [
         {'label': 'Главная', 'endpoint': 'main.index', 'icon': 'img/nav/home.svg'},
-        {'label': 'Мероприятия', 'endpoint': 'main.index', 'icon': 'img/nav/events.svg'},
+        {'label': 'Мероприятия', 'endpoint': 'main.events', 'icon': 'img/nav/events.svg'},
         {'label': 'Учителя', 'endpoint': 'main.teachers', 'icon': 'img/nav/teachers.svg'},
         {'label': 'Здания', 'endpoint': 'main.buildings', 'icon': 'img/nav/buildings.svg'},
     ],

@@ -5,6 +5,7 @@ from .base_policy import BasePolicy, authentication_required
 from .schools_policy import SchoolsPolicy
 from .teachers_policy import TeachersPolicy
 from .buildings_policy import BuildingsPolicy
+from .events_policy import EventsPolicy
 
 
 PolicyClass = Type[BasePolicy]
@@ -15,6 +16,7 @@ policies_registry: Dict[str, PolicyClass] = {
     'teachers': TeachersPolicy,
     'schools': SchoolsPolicy,
     'buildings': BuildingsPolicy,
+    'events': EventsPolicy,
 }
 
 
@@ -42,6 +44,7 @@ __all__ = [
     'TeachersPolicy',
     'SchoolsPolicy',
     'BuildingsPolicy',
+    'EventsPolicy',
     'BasePolicy',
     'authentication_required',
     'policies_registry',

@@ -1,0 +1,375 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Iterable, Optional
+
+from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from flask.typing import ResponseReturnValue
+from flask_login import current_user, login_required
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.auth import check_rights
+from app.auth.policies import EventsPolicy
+from app.models import Event, EventStatus, SlotStatus
+from app.repositories import EventRepository, get_repository
+from app.routes import bp, get_pages
+
+
+event_repository: EventRepository = get_repository('events')
+
+
+@dataclass(frozen=True)
+class MetaItem:
+    label: str
+    value: str
+
+
+@dataclass(frozen=True)
+class StatItem:
+    label: str
+    value: str
+
+
+@dataclass(frozen=True)
+class BookingItem:
+    building: str
+    rooms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EventViewModel:
+    event_id: int
+    title_label: Optional[str]
+    title_text: str
+    info_label: Optional[str]
+    status_label: str
+    status_modifier: str
+    status_hint: Optional[str]
+    meta_items: tuple[MetaItem, ...]
+    stats: tuple[StatItem, ...]
+    bookings: tuple[BookingItem, ...]
+    menu_config: Optional[dict[str, object]]
+
+
+STATUS_LABELS: dict[EventStatus, str] = {
+    EventStatus.scheduled: 'Запланировано',
+    EventStatus.ongoing: 'Идёт сейчас',
+    EventStatus.completed: 'Завершено',
+    EventStatus.cancelled: 'Отменено',
+}
+
+DATETIME_INPUT_FORMAT = '%Y-%m-%dT%H:%M'
+
+def format_datetime_value(value: datetime) -> str:
+    return value.strftime('%d.%m.%Y %H:%M')
+
+
+def format_input_datetime(value: datetime) -> str:
+    return value.strftime(DATETIME_INPUT_FORMAT)
+
+
+def format_event_period(start: datetime, end: datetime) -> str:
+    same_day = start.date() == end.date()
+    if same_day:
+        start_date = start.strftime('%d.%m.%Y')
+        return f"{start_date}, {start.strftime('%H:%M')} — {end.strftime('%H:%M')}"
+    return f"{start.strftime('%d.%m.%Y %H:%M')} — {end.strftime('%d.%m.%Y %H:%M')}"
+
+
+def build_status_hint(event: Event) -> Optional[str]:
+    if event.status == EventStatus.scheduled:
+        return f"Старт {format_datetime_value(event.start_time)}"
+    if event.status == EventStatus.ongoing:
+        return f"Идёт до {format_datetime_value(event.end_time)}"
+    if event.status == EventStatus.completed:
+        return f"Завершено {format_datetime_value(event.end_time)}"
+    if event.status == EventStatus.cancelled:
+        return 'Мероприятие отменено'
+    return None
+
+
+def parse_datetime_input(value: str, *, field_label: str, errors: list[str]) -> Optional[datetime]:
+    if not value:
+        errors.append(f'Укажите {field_label}')
+        return None
+    try:
+        return datetime.strptime(value, DATETIME_INPUT_FORMAT)
+    except ValueError:
+        errors.append(f'Некорректный формат для поля "{field_label}"')
+        return None
+
+
+def validate_event_period(start: Optional[datetime], end: Optional[datetime], errors: list[str]) -> None:
+    if start and end and end <= start:
+        errors.append('Время окончания должно быть позже времени начала')
+
+
+def build_meta_items(event: Event) -> tuple[MetaItem, ...]:
+    meta: list[MetaItem] = [
+        MetaItem(label='Начало', value=format_datetime_value(event.start_time)),
+        MetaItem(label='Окончание', value=format_datetime_value(event.end_time)),
+        MetaItem(label='Создано', value=format_datetime_value(event.created_at)),
+    ]
+    return tuple(meta)
+
+
+def build_stats(event: Event) -> tuple[StatItem, ...]:
+    active_slots = [slot for slot in event.slots if slot.status != SlotStatus.cancelled]
+    slot_count = len(active_slots)
+    teacher_count = len({slot.teacher_id for slot in active_slots if slot.teacher_id})
+    parent_count = len({slot.parent_id for slot in active_slots if slot.parent_id})
+    building_count = len({booking.building_id for booking in event.building_bookings})
+    classroom_count = len({
+        (booking.building_id, booking.classroom)
+        for booking in event.building_bookings
+        if booking.classroom
+    })
+
+    stats: list[StatItem] = [
+        StatItem(label='Записей', value=str(slot_count)),
+        StatItem(label='Педагогов', value=str(teacher_count)),
+        StatItem(label='Родителей', value=str(parent_count)),
+        StatItem(label='Зданий', value=str(building_count)),
+    ]
+
+    stats.append(StatItem(label='Аудиторий', value=str(classroom_count)))
+    return tuple(stats)
+
+
+def build_bookings(event: Event) -> tuple[BookingItem, ...]:
+    bookings_map: dict[str, set[str]] = {}
+
+    for booking in event.building_bookings:
+        building_name = booking.building.name if booking.building else 'Помещение не указано'
+        rooms = bookings_map.setdefault(building_name, set())
+        if booking.classroom:
+            rooms.add(booking.classroom)
+
+    bookings_sorted = sorted(bookings_map.items(), key=lambda item: item[0].lower())
+    bookings: list[BookingItem] = [
+        BookingItem(building=building, rooms=tuple(sorted(rooms)))
+        for building, rooms in bookings_sorted
+    ]
+    return tuple(bookings)
+
+
+def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Optional[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    if can_edit:
+        items.append(
+            {
+                'action': 'edit',
+                'label': 'Править',
+                'attrs': {
+                    'data-event-id': str(event.event_id),
+                    'data-event-start': format_input_datetime(event.start_time),
+                    'data-event-end': format_input_datetime(event.end_time),
+                },
+            }
+        )
+    if can_delete:
+        items.append(
+            {
+                'action': 'delete',
+                'label': 'Удалить',
+                'danger': True,
+                'attrs': {
+                    'data-event-id': str(event.event_id),
+                    'data-event-period': format_event_period(event.start_time, event.end_time),
+                },
+            }
+        )
+    if not items:
+        return None
+    return {
+        'aria_label': 'Действия с мероприятием',
+        'items': items,
+    }
+
+
+def build_event_view_model(event: Event, *, can_edit: bool, can_delete: bool) -> EventViewModel:
+    status_label = STATUS_LABELS.get(event.status, event.status.value.title())
+    return EventViewModel(
+        event_id=event.event_id,
+        title_label='Период',
+        title_text=format_event_period(event.start_time, event.end_time),
+        info_label=None,
+        status_label=status_label,
+        status_modifier=event.status.value,
+        status_hint=build_status_hint(event),
+        meta_items=build_meta_items(event),
+        stats=build_stats(event),
+        bookings=build_bookings(event),
+        menu_config=build_menu_config(event, can_edit=can_edit, can_delete=can_delete),
+    )
+
+
+def matches_search(view_model: EventViewModel, query_lower: str) -> bool:
+    if query_lower in str(view_model.event_id):
+        return True
+    if query_lower and query_lower in view_model.title_text.lower():
+        return True
+    if query_lower and query_lower in view_model.status_label.lower():
+        return True
+
+    for meta in view_model.meta_items:
+        if query_lower in meta.label.lower() or query_lower in meta.value.lower():
+            return True
+
+    for stat in view_model.stats:
+        if query_lower in stat.label.lower() or query_lower in stat.value.lower():
+            return True
+
+    for booking in view_model.bookings:
+        if query_lower in booking.building.lower():
+            return True
+        for room in booking.rooms:
+            if query_lower in room.lower():
+                return True
+
+    return False
+
+
+@bp.route('/events', methods=['GET', 'POST'])
+@login_required
+@check_rights('events', 'get_page')
+def events() -> ResponseReturnValue:
+    events_policy = EventsPolicy(user_id=current_user.user_id)
+    can_create = events_policy.create()
+    can_edit = events_policy.edit()
+    can_delete = events_policy.delete()
+
+    school = current_user.school
+    search_query = (request.args.get('q') or '').strip()
+
+    form_data: dict[str, str] = {}
+    form_mode = 'create'
+    form_event_id: Optional[int] = None
+    show_event_form = False
+
+    if request.method == 'POST':
+        if not can_create:
+            abort(403)
+
+        form_type = (request.form.get('form_type') or 'create').strip().lower()
+
+        if form_type == 'delete':
+            event_id = request.form.get('event_id', type=int)
+            if not event_id:
+                flash('Не удалось определить мероприятие для удаления', 'warning')
+                return redirect(url_for('main.events'))
+
+            event = event_repository.get_by_id(event_id)
+            if not event or not school or event.school_id != school.school_id:
+                flash('Мероприятие не найдено или не относится к вашей школе', 'warning')
+                return redirect(url_for('main.events'))
+
+            try:
+                event_repository.delete(event_id)
+            except SQLAlchemyError:
+                event_repository.rollback()
+                current_app.logger.exception('Failed to delete event %s', event_id)
+                flash('Не удалось удалить мероприятие, попробуйте ещё раз позже', 'danger')
+            else:
+                flash('Мероприятие успешно удалено!', 'success')
+            return redirect(url_for('main.events'))
+
+        start_value = (request.form.get('start_time') or '').strip()
+        end_value = (request.form.get('end_time') or '').strip()
+
+        form_data = {
+            'start_time': start_value,
+            'end_time': end_value,
+        }
+
+        errors: list[str] = []
+
+        start_dt = parse_datetime_input(start_value, field_label='время начала', errors=errors)
+        end_dt = parse_datetime_input(end_value, field_label='время окончания', errors=errors)
+        validate_event_period(start_dt, end_dt, errors)
+
+        event: Optional[Event] = None
+
+        if form_type == 'update':
+            form_mode = 'update'
+            event_id = request.form.get('event_id', type=int)
+            form_event_id = event_id
+            if not event_id:
+                errors.append('Не удалось определить мероприятие для обновления')
+            elif not can_edit:
+                abort(403)
+            else:
+                event = event_repository.get_by_id(event_id)
+                if not event or not school or event.school_id != school.school_id:
+                    errors.append('Мероприятие не найдено или не относится к вашей школе')
+
+        if errors:
+            show_event_form = True
+            for error in errors:
+                flash(error, 'warning')
+        else:
+            if not school:
+                flash('Не удаётся определить школу пользователя — обратитесь к администратору системы', 'danger')
+                show_event_form = True
+            else:
+                try:
+                    if form_type == 'create':
+                        event_repository.create(
+                            school_id=school.school_id,
+                            start_time=start_dt,
+                            end_time=end_dt,
+                        )
+                    elif form_type == 'update' and event:
+                        event_repository.update(
+                            event_id=event.event_id,
+                            start_time=start_dt,
+                            end_time=end_dt,
+                        )
+                except SQLAlchemyError:
+                    event_repository.rollback()
+                    action = 'обновить' if form_type == 'update' else 'создать'
+                    current_app.logger.exception('Failed to %s event', action)
+                    flash('Не удалось сохранить данные мероприятия — попробуйте ещё раз позже', 'danger')
+                    show_event_form = True
+                else:
+                    if form_type == 'update':
+                        flash('Мероприятие успешно обновлено!', 'success')
+                    else:
+                        flash('Мероприятие успешно создано!', 'success')
+                    return redirect(url_for('main.events'))
+
+    view_models: list[EventViewModel] = []
+    if school:
+        event_repository.refresh_statuses_for_school(school.school_id)
+        raw_events: Iterable[Event] = event_repository.get_for_school(school.school_id)
+        view_models = [
+            build_event_view_model(event, can_edit=can_edit, can_delete=can_delete)
+            for event in raw_events
+        ]
+        if search_query:
+            search_lower = search_query.lower()
+            view_models = [
+                view_model
+                for view_model in view_models
+                if matches_search(view_model, search_lower)
+            ]
+
+    if not form_data:
+        form_data = {
+            'start_time': '',
+            'end_time': '',
+        }
+
+    return render_template(
+        'admin/events.html',
+        page_title='Мероприятия',
+        pages=get_pages(),
+        events=view_models,
+        search_query=search_query,
+        can_manage_events=can_create,
+        event_form_data=form_data,
+        show_event_form=show_event_form,
+        event_form_mode=form_mode,
+        event_form_event_id=form_event_id,
+    )

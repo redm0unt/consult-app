@@ -47,7 +47,9 @@
 {% macro management_card(base, title_label, title_text, info_label, menu_config=None) %}
 <article class="management-card {{ base }}-card">
     <div class="management-card__header {{ base }}-card__header">
+        {% if title_label %}
         <span class="management-card__label {{ base }}-card__label">{{ title_label }}</span>
+        {% endif %}
         {% if menu_config %}
             {% set items = menu_config.get('items') %}
             {% if items %}
@@ -57,7 +59,9 @@
     </div>
     <h2 class="management-card__name {{ base }}-card__name">{{ title_text }}</h2>
     <div class="management-card__info {{ base }}-card__info">
+        {% if info_label %}
         <span class="management-card__label {{ base }}-card__label">{{ info_label }}</span>
+        {% endif %}
         <div class="management-card__data {{ base }}-card__data">
             {% if caller %}
                 {{ caller() }}

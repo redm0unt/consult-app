@@ -5,8 +5,12 @@
 
 .management-grid {
     display: grid;
-    gap: 18px;
+    gap: 10px;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.management-grid--full {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .management-card {
@@ -46,6 +50,79 @@
     display: flex;
     flex-direction: column;
     gap: var(--management-card-info-gap, 6px);
+}
+
+.management-card__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.management-card__status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.management-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.management-badge--scheduled {
+    background-color: rgba(var(--color-accent-rgb), 0.12);
+    color: var(--color-deep-green_2);
+}
+
+.management-badge--ongoing {
+    background-color: rgba(76, 175, 80, 0.16);
+    color: #2f7d32;
+}
+
+.management-badge--completed {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--color-dark-gray);
+}
+
+.management-badge--cancelled {
+    background-color: rgba(201, 40, 40, 0.14);
+    color: var(--color-red-danger);
+}
+
+.management-meta {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 16px 28px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.management-meta__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.management-meta__label {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gray_0);
+}
+
+.management-meta__value {
+    font-size: 18px;
+    color: var(--color-dark-gray);
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 .management-card__data {

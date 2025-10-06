@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "elements/general_elements.html" import render_empty_state_block %}
+{% from "elements/management_macros.html" import management_controls, management_card, management_add_button, management_modal, management_delete_form %}
+
+{% set page_description = "Обзор и управление мероприятиями школы" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/admin/management.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style/pages/admin/events.css') }}">
+{% endblock %}
+
+{% block content %}
+{{ render_header(page_title, page_description) }}
+<main class="content-main">
+<section class="section" aria-label="Управление мероприятиями">
+    {% call management_controls('Название мероприятия, даты') %}
+        {% if can_manage_events %}
+        {{ management_add_button('data-events-add', 'Создать мероприятие') }}
+        {% endif %}
+    {% endcall %}
+
+    {% if events %}
+    <section class="management-grid management-grid--full events-grid" aria-label="Список мероприятий">
+        {% for event in events %}
+        {% set menu_config = event.menu_config if can_manage_events else None %}
+        {% call management_card('event', event.title_label, event.title_text, event.info_label, menu_config) %}
+            <div class="event-card__body">
+                <div class="event-card__status-row">
+                    <span class="management-badge management-badge--{{ event.status_modifier }} event-card__status-badge">{{ event.status_label }}</span>
+                    {% if event.status_hint %}
+                    <span class="event-card__status-hint">{{ event.status_hint }}</span>
+                    {% endif %}
+                </div>
+
+                {% if event.meta_items %}
+                <ul class="management-meta event-card__meta">
+                    {% for item in event.meta_items %}
+                    <li class="management-meta__item">
+                        <span class="management-meta__label">{{ item.label }}</span>
+                        <span class="management-meta__value">{{ item.value }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if event.stats %}
+                <ul class="event-card__stats">
+                    {% for stat in event.stats %}
+                    <li class="event-card__stats-item">
+                        <span class="event-card__stats-value">{{ stat.value }}</span>
+                        <span class="event-card__stats-label">{{ stat.label }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if event.bookings %}
+                <div class="event-card__bookings">
+                    <h3 class="event-card__bookings-title">Занятые помещения</h3>
+                    <ul class="event-card__bookings-list">
+                        {% for booking in event.bookings %}
+                        <li class="event-card__bookings-item">
+                            <span class="event-card__booking-building">{{ booking.building }}</span>
+                            {% if booking.rooms %}
+                            <span class="event-card__booking-rooms">{{ booking.rooms | join(', ') }}</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        {% endcall %}
+        {% endfor %}
+    </section>
+    {% else %}
+    {{ render_empty_state_block('Мероприятия не найдены. Создайте первое мероприятие, чтобы начать планирование') }}
+    {% endif %}
+
+    {% if can_manage_events %}
+    {% set event_form = event_form_data or {} %}
+    {% set event_modal_config = {
+        'prefix': 'events',
+        'show': show_event_form,
+        'mode': event_form_mode or 'create',
+        'dataset_id_attr': 'event-id',
+        'dataset_id_value': event_form_event_id,
+        'title_create': 'Создание мероприятия',
+        'title_update': 'Редактирование мероприятия',
+        'submit_create': 'Создать',
+        'submit_update': 'Сохранить изменения',
+        'close_label': 'Закрыть форму',
+        'hidden_fields': [
+            {'name': 'form_type', 'value': event_form_mode or 'create'},
+            {'name': 'event_id', 'value': event_form_event_id or ''}
+        ]
+    } %}
+    {% call management_modal(event_modal_config) %}
+        <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="event_start_time">Начало</label>
+            <input id="event_start_time" name="start_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('start_time', '') }}" required>
+        </div>
+        <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="event_end_time">Окончание</label>
+            <input id="event_end_time" name="end_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('end_time', '') }}" required>
+        </div>
+    {% endcall %}
+    {{ management_delete_form('events', 'event_id') }}
+    {% endif %}
+</section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if can_manage_events %}
+<script type="module" src="{{ url_for('static', filename='js/pages/events/index.js') }}"></script>
+{% endif %}
+{% endblock %}
