@@ -14,7 +14,7 @@
 {{ render_header(page_title, page_description) }}
 <main class="content-main">
 <section class="section" aria-label="Управление мероприятиями">
-    {% call management_controls('Название мероприятия, даты') %}
+    {% call management_controls('Название, период, статус') %}
         {% if can_manage_events %}
         {{ management_add_button('data-events-add', 'Создать мероприятие') }}
         {% endif %}
@@ -24,52 +24,64 @@
     <section class="management-grid management-grid--full events-grid" aria-label="Список мероприятий">
         {% for event in events %}
         {% set menu_config = event.menu_config if can_manage_events else None %}
+        {% set detail_payload = {
+            'title': event.title_text,
+            'status': event.status_label,
+            'statusModifier': event.status_modifier,
+            'statusHint': event.status_hint,
+            'period': event.period_text,
+            'consultations': event.consultations_count,
+            'durationMinutes': event.duration_minutes,
+            'consultationDurationMinutes': event.consultation_duration_minutes,
+            'meta': event.meta_items,
+            'stats': event.stats,
+            'bookings': event.bookings
+        } %}
         {% call management_card('event', event.title_label, event.title_text, event.info_label, menu_config) %}
-            <div class="event-card__body">
-                <div class="event-card__status-row">
-                    <span class="management-badge management-badge--{{ event.status_modifier }} event-card__status-badge">{{ event.status_label }}</span>
-                    {% if event.status_hint %}
-                    <span class="event-card__status-hint">{{ event.status_hint }}</span>
-                    {% endif %}
+            <div class="event-card__body" data-event-card data-event-detail='{{ detail_payload | tojson | safe }}' role="button" tabindex="0" aria-label="Подробнее о {{ event.title_text }}">
+                <div class="event-card__top">
+                    <div class="event-card__status">
+                        <span class="management-badge management-badge--{{ event.status_modifier }} event-card__status-badge">{{ event.status_label }}</span>
+                        {% if event.status_hint %}
+                        <span class="event-card__status-hint">{{ event.status_hint }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="event-card__period">
+                        <span class="event-card__period-label">Период</span>
+                        <span class="event-card__period-value">{{ event.period_text }}</span>
+                    </div>
+                </div>
+
+                <div class="event-card__highlights">
+                    <div class="event-card__highlight">
+                        <span class="event-card__highlight-value">{{ event.consultations_count }}</span>
+                        <span class="event-card__highlight-label">консультаций</span>
+                    </div>
+                    <div class="event-card__highlight">
+                        <span class="event-card__highlight-value">{{ event.duration_minutes }}</span>
+                        <span class="event-card__highlight-label">длительность, мин</span>
+                    </div>
+                    <div class="event-card__highlight">
+                        <span class="event-card__highlight-value">{{ event.consultation_duration_minutes }}</span>
+                        <span class="event-card__highlight-label">консультация, мин</span>
+                    </div>
                 </div>
 
                 {% if event.meta_items %}
-                <ul class="management-meta event-card__meta">
+                <div class="event-card__meta-grid">
                     {% for item in event.meta_items %}
-                    <li class="management-meta__item">
-                        <span class="management-meta__label">{{ item.label }}</span>
-                        <span class="management-meta__value">{{ item.value }}</span>
-                    </li>
+                    <div class="event-card__meta-item">
+                        <span class="event-card__meta-label">{{ item.label }}</span>
+                        <span class="event-card__meta-value">{{ item.value }}</span>
+                    </div>
                     {% endfor %}
-                </ul>
-                {% endif %}
-
-                {% if event.stats %}
-                <ul class="event-card__stats">
-                    {% for stat in event.stats %}
-                    <li class="event-card__stats-item">
-                        <span class="event-card__stats-value">{{ stat.value }}</span>
-                        <span class="event-card__stats-label">{{ stat.label }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-
-                {% if event.bookings %}
-                <div class="event-card__bookings">
-                    <h3 class="event-card__bookings-title">Занятые помещения</h3>
-                    <ul class="event-card__bookings-list">
-                        {% for booking in event.bookings %}
-                        <li class="event-card__bookings-item">
-                            <span class="event-card__booking-building">{{ booking.building }}</span>
-                            {% if booking.rooms %}
-                            <span class="event-card__booking-rooms">{{ booking.rooms | join(', ') }}</span>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
                 </div>
                 {% endif %}
+
+                <div class="event-card__details-cue" aria-hidden="true">
+                    <span class="event-card__details-label">Подробнее</span>
+                    <span class="event-card__details-icon" aria-hidden="true">→</span>
+                </div>
             </div>
         {% endcall %}
         {% endfor %}
@@ -77,6 +89,57 @@
     {% else %}
     {{ render_empty_state_block('Мероприятия не найдены. Создайте первое мероприятие, чтобы начать планирование') }}
     {% endif %}
+
+    <div class="event-details-modal" data-event-details-modal aria-hidden="true">
+        <div class="event-details-modal__overlay" data-event-details-close></div>
+        <div class="event-details-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="event-details-title">
+            <header class="event-details-modal__header">
+                <div class="event-details-modal__header-texts">
+                    <h2 id="event-details-title" class="event-details-modal__title" data-event-details-title>Мероприятие</h2>
+                    <div class="event-details-modal__status" data-event-details-status-container>
+                        <span class="management-badge event-details-modal__status-badge" data-event-details-status></span>
+                        <span class="event-details-modal__status-hint" data-event-details-status-hint></span>
+                    </div>
+                </div>
+                <button type="button" class="event-details-modal__close" data-event-details-close aria-label="Закрыть подробности">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </header>
+            <section class="event-details-modal__section">
+                <h3 class="event-details-modal__section-label">Период</h3>
+                <p class="event-details-modal__period" data-event-details-period></p>
+            </section>
+            <section class="event-details-modal__section event-details-modal__section--highlights">
+                <div class="event-details-modal__highlight" data-event-details-highlight-consultations>
+                    <span class="event-details-modal__highlight-value" data-event-details-consultations>0</span>
+                    <span class="event-details-modal__highlight-label">консультаций</span>
+                </div>
+                <div class="event-details-modal__highlight" data-event-details-highlight-duration>
+                    <span class="event-details-modal__highlight-value" data-event-details-duration>0</span>
+                    <span class="event-details-modal__highlight-label">длительность, мин</span>
+                </div>
+                <div class="event-details-modal__highlight" data-event-details-highlight-consultation-duration>
+                    <span class="event-details-modal__highlight-value" data-event-details-consultation-duration>0</span>
+                    <span class="event-details-modal__highlight-label">консультация, мин</span>
+                </div>
+            </section>
+            <section class="event-details-modal__section">
+                <h3 class="event-details-modal__section-label">Ключевые отметки</h3>
+                <div class="event-details-modal__meta" data-event-details-meta></div>
+            </section>
+            <section class="event-details-modal__section" data-event-details-stats-section>
+                <div class="event-details-modal__section-heading">
+                    <h3 class="event-details-modal__section-label">Статистика</h3>
+                    <p class="event-details-modal__section-note">Данные обновляются автоматически</p>
+                </div>
+                <div class="event-details-modal__stats-grid" data-event-details-stats></div>
+            </section>
+            <section class="event-details-modal__section" data-event-details-bookings-section>
+                <h3 class="event-details-modal__section-label">Занятые помещения</h3>
+                <ul class="event-details-modal__bookings-list" data-event-details-bookings></ul>
+            </section>
+        </div>
+    </div>
 
     {% if can_manage_events %}
     {% set event_form = event_form_data or {} %}
@@ -98,12 +161,24 @@
     } %}
     {% call management_modal(event_modal_config) %}
         <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="event_name">Название</label>
+            <input id="event_name" name="name" type="text" class="input-fields-container__row-input" value="{{ event_form.get('name', '') }}" maxlength="120" required>
+        </div>
+        <div class="input-fields-container__row">
             <label class="input-fields-container__row-label" for="event_start_time">Начало</label>
             <input id="event_start_time" name="start_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('start_time', '') }}" required>
         </div>
         <div class="input-fields-container__row">
-            <label class="input-fields-container__row-label" for="event_end_time">Окончание</label>
-            <input id="event_end_time" name="end_time" type="datetime-local" class="input-fields-container__row-input" value="{{ event_form.get('end_time', '') }}" required>
+            <label class="input-fields-container__row-label" for="event_consultations_count">Количество консультаций</label>
+            <input id="event_consultations_count" name="consultations_count" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultations_count', '0') }}" min="1" step="1" required>
+        </div>
+        <div class="input-fields-container__row">
+            <label class="input-fields-container__row-label" for="event_consultation_duration">Длительность консультации, мин</label>
+            <input id="event_consultation_duration" name="consultation_duration_minutes" type="number" class="input-fields-container__row-input" value="{{ event_form.get('consultation_duration_minutes', '15') }}" min="1" step="1" required>
+        </div>
+        <div class="input-fields-container__row input-fields-container__row--computed">
+            <span class="input-fields-container__row-label">Окончание</span>
+            <output id="event_end_preview" class="input-fields-container__computed" data-event-end-preview>{{ event_form.get('calculated_end_time', '') }}</output>
         </div>
     {% endcall %}
     {{ management_delete_form('events', 'event_id') }}

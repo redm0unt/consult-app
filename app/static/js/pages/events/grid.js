@@ -23,7 +23,19 @@ function setupEventsGrid({ root = document, modalManager = null } = {}) {
             const eventId = actionButton.dataset.eventId || '';
             const start = actionButton.dataset.eventStart || '';
             const end = actionButton.dataset.eventEnd || '';
-            modalManager.open('update', { eventId, start, end });
+            const name = actionButton.dataset.eventName || '';
+            const consultations = actionButton.dataset.eventConsultations || '0';
+            const consultationDuration = actionButton.dataset.eventConsultationDuration || '';
+            const durationMinutes = actionButton.dataset.eventDurationMinutes || '';
+            modalManager.open('update', {
+                eventId,
+                name,
+                consultations,
+                consultationDuration,
+                durationMinutes,
+                start,
+                end,
+            });
             return;
         }
 
@@ -34,9 +46,16 @@ function setupEventsGrid({ root = document, modalManager = null } = {}) {
 
             const eventId = actionButton.dataset.eventId || '';
             const eventPeriod = actionButton.dataset.eventPeriod || '';
-            const confirmationMessage = eventPeriod
-                ? `Удалить мероприятие (${eventPeriod})?`
-                : 'Удалить выбранное мероприятие?';
+            const eventName = actionButton.dataset.eventName || '';
+            let confirmationMessage = 'Удалить выбранное мероприятие?';
+
+            if (eventName && eventPeriod) {
+                confirmationMessage = `Удалить мероприятие «${eventName}» (${eventPeriod})?`;
+            } else if (eventName) {
+                confirmationMessage = `Удалить мероприятие «${eventName}»?`;
+            } else if (eventPeriod) {
+                confirmationMessage = `Удалить мероприятие (${eventPeriod})?`;
+            }
 
             if (!window.confirm(confirmationMessage)) {
                 return;

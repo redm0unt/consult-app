@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 from flask import abort, current_app, flash, redirect, render_template, request, url_for
@@ -42,6 +42,7 @@ class EventViewModel:
     event_id: int
     title_label: Optional[str]
     title_text: str
+    period_text: str
     info_label: Optional[str]
     status_label: str
     status_modifier: str
@@ -49,6 +50,9 @@ class EventViewModel:
     meta_items: tuple[MetaItem, ...]
     stats: tuple[StatItem, ...]
     bookings: tuple[BookingItem, ...]
+    consultations_count: int
+    duration_minutes: int
+    consultation_duration_minutes: int
     menu_config: Optional[dict[str, object]]
 
 
@@ -60,6 +64,7 @@ STATUS_LABELS: dict[EventStatus, str] = {
 }
 
 DATETIME_INPUT_FORMAT = '%Y-%m-%dT%H:%M'
+
 
 def format_datetime_value(value: datetime) -> str:
     return value.strftime('%d.%m.%Y %H:%M')
@@ -100,11 +105,6 @@ def parse_datetime_input(value: str, *, field_label: str, errors: list[str]) -> 
         return None
 
 
-def validate_event_period(start: Optional[datetime], end: Optional[datetime], errors: list[str]) -> None:
-    if start and end and end <= start:
-        errors.append('Время окончания должно быть позже времени начала')
-
-
 def build_meta_items(event: Event) -> tuple[MetaItem, ...]:
     meta: list[MetaItem] = [
         MetaItem(label='Начало', value=format_datetime_value(event.start_time)),
@@ -125,8 +125,16 @@ def build_stats(event: Event) -> tuple[StatItem, ...]:
         for booking in event.building_bookings
         if booking.classroom
     })
+    duration_minutes = (
+        event.duration_minutes
+        if getattr(event, 'duration_minutes', None) is not None
+        else int((event.end_time - event.start_time).total_seconds() // 60)
+    )
 
     stats: list[StatItem] = [
+        StatItem(label='Консультаций', value=str(event.consultations_count or 0)),
+        StatItem(label='Длительность, мин', value=str(duration_minutes)),
+        StatItem(label='Консультация, мин', value=str(event.consultation_duration_minutes or 0)),
         StatItem(label='Записей', value=str(slot_count)),
         StatItem(label='Педагогов', value=str(teacher_count)),
         StatItem(label='Родителей', value=str(parent_count)),
@@ -156,6 +164,11 @@ def build_bookings(event: Event) -> tuple[BookingItem, ...]:
 
 def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Optional[dict[str, object]]:
     items: list[dict[str, object]] = []
+    duration_minutes = (
+        event.duration_minutes
+        if getattr(event, 'duration_minutes', None) is not None
+        else int((event.end_time - event.start_time).total_seconds() // 60)
+    )
     if can_edit:
         items.append(
             {
@@ -164,7 +177,11 @@ def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Opti
                 'attrs': {
                     'data-event-id': str(event.event_id),
                     'data-event-start': format_input_datetime(event.start_time),
+                    'data-event-name': event.name,
+                    'data-event-consultations': str(event.consultations_count),
+                    'data-event-consultation-duration': str(event.consultation_duration_minutes),
                     'data-event-end': format_input_datetime(event.end_time),
+                    'data-event-duration-minutes': str(duration_minutes),
                 },
             }
         )
@@ -177,6 +194,8 @@ def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Opti
                 'attrs': {
                     'data-event-id': str(event.event_id),
                     'data-event-period': format_event_period(event.start_time, event.end_time),
+                    'data-event-name': event.name,
+                    'data-event-consultations': str(event.consultations_count),
                 },
             }
         )
@@ -190,10 +209,16 @@ def build_menu_config(event: Event, *, can_edit: bool, can_delete: bool) -> Opti
 
 def build_event_view_model(event: Event, *, can_edit: bool, can_delete: bool) -> EventViewModel:
     status_label = STATUS_LABELS.get(event.status, event.status.value.title())
+    duration_minutes = (
+        event.duration_minutes
+        if getattr(event, 'duration_minutes', None) is not None
+        else int((event.end_time - event.start_time).total_seconds() // 60)
+    )
     return EventViewModel(
         event_id=event.event_id,
-        title_label='Период',
-        title_text=format_event_period(event.start_time, event.end_time),
+        title_label='Мероприятие',
+        title_text=event.name or 'Без названия',
+        period_text=format_event_period(event.start_time, event.end_time),
         info_label=None,
         status_label=status_label,
         status_modifier=event.status.value,
@@ -201,6 +226,9 @@ def build_event_view_model(event: Event, *, can_edit: bool, can_delete: bool) ->
         meta_items=build_meta_items(event),
         stats=build_stats(event),
         bookings=build_bookings(event),
+        consultations_count=event.consultations_count or 0,
+        duration_minutes=duration_minutes,
+        consultation_duration_minutes=event.consultation_duration_minutes or 0,
         menu_config=build_menu_config(event, can_edit=can_edit, can_delete=can_delete),
     )
 
@@ -210,7 +238,15 @@ def matches_search(view_model: EventViewModel, query_lower: str) -> bool:
         return True
     if query_lower and query_lower in view_model.title_text.lower():
         return True
+    if query_lower and query_lower in view_model.period_text.lower():
+        return True
     if query_lower and query_lower in view_model.status_label.lower():
+        return True
+    if query_lower and query_lower in str(view_model.consultations_count):
+        return True
+    if query_lower and query_lower in str(view_model.duration_minutes):
+        return True
+    if query_lower and query_lower in str(view_model.consultation_duration_minutes):
         return True
 
     for meta in view_model.meta_items:
@@ -276,18 +312,61 @@ def events() -> ResponseReturnValue:
             return redirect(url_for('main.events'))
 
         start_value = (request.form.get('start_time') or '').strip()
-        end_value = (request.form.get('end_time') or '').strip()
+        name_value = (request.form.get('name') or '').strip()
+        consultations_value_str = (request.form.get('consultations_count') or '').strip()
+        consultation_duration_value_str = (request.form.get('consultation_duration_minutes') or '').strip()
 
         form_data = {
             'start_time': start_value,
-            'end_time': end_value,
+            'name': name_value,
+            'consultations_count': consultations_value_str,
+            'consultation_duration_minutes': consultation_duration_value_str,
+            'calculated_end_time': '',
         }
 
         errors: list[str] = []
 
+        if not name_value:
+            errors.append('Укажите название мероприятия')
+        elif len(name_value) > 120:
+            errors.append('Название мероприятия не должно превышать 120 символов')
+
+        consultations_count_value: Optional[int] = None
+        if consultations_value_str:
+            if consultations_value_str.isdigit():
+                consultations_count_value = int(consultations_value_str)
+                if consultations_count_value < 1:
+                    errors.append('Количество консультаций должно быть не меньше 1')
+                    consultations_count_value = None
+            else:
+                errors.append('Количество консультаций должно быть числом')
+        else:
+            errors.append('Укажите количество консультаций')
+
+        consultation_duration_value: Optional[int] = None
+        if consultation_duration_value_str:
+            if consultation_duration_value_str.isdigit():
+                consultation_duration_value = int(consultation_duration_value_str)
+                if consultation_duration_value < 1:
+                    errors.append('Длительность одной консультации должна быть не меньше 1 минуты')
+                    consultation_duration_value = None
+            else:
+                errors.append('Длительность одной консультации должна быть числом')
+        else:
+            errors.append('Укажите длительность одной консультации')
+
         start_dt = parse_datetime_input(start_value, field_label='время начала', errors=errors)
-        end_dt = parse_datetime_input(end_value, field_label='время окончания', errors=errors)
-        validate_event_period(start_dt, end_dt, errors)
+        end_dt: Optional[datetime] = None
+        total_minutes = None
+        if (
+            start_dt
+            and consultations_count_value is not None
+            and consultation_duration_value is not None
+        ):
+            total_minutes = consultations_count_value * consultation_duration_value
+            end_dt = start_dt + timedelta(minutes=total_minutes)
+            if total_minutes <= 0:
+                errors.append('Итоговая длительность мероприятия должна быть больше нуля')
 
         event: Optional[Event] = None
 
@@ -304,6 +383,11 @@ def events() -> ResponseReturnValue:
                 if not event or not school or event.school_id != school.school_id:
                     errors.append('Мероприятие не найдено или не относится к вашей школе')
 
+        if start_dt and end_dt:
+            form_data['calculated_end_time'] = format_event_period(start_dt, end_dt)
+        else:
+            form_data['calculated_end_time'] = ''
+
         if errors:
             show_event_form = True
             for error in errors:
@@ -313,18 +397,26 @@ def events() -> ResponseReturnValue:
                 flash('Не удаётся определить школу пользователя — обратитесь к администратору системы', 'danger')
                 show_event_form = True
             else:
+                consultations_count_safe = consultations_count_value if consultations_count_value is not None else 0
+                consultation_duration_safe = consultation_duration_value if consultation_duration_value is not None else 0
                 try:
                     if form_type == 'create':
                         event_repository.create(
+                            name=name_value,
                             school_id=school.school_id,
                             start_time=start_dt,
                             end_time=end_dt,
+                            consultations_count=consultations_count_safe,
+                            consultation_duration_minutes=consultation_duration_safe,
                         )
                     elif form_type == 'update' and event:
                         event_repository.update(
                             event_id=event.event_id,
+                            name=name_value,
                             start_time=start_dt,
                             end_time=end_dt,
+                            consultations_count=consultations_count_value,
+                            consultation_duration_minutes=consultation_duration_value,
                         )
                 except SQLAlchemyError:
                     event_repository.rollback()
@@ -357,8 +449,11 @@ def events() -> ResponseReturnValue:
 
     if not form_data:
         form_data = {
+            'name': '',
             'start_time': '',
-            'end_time': '',
+            'consultations_count': '1',
+            'consultation_duration_minutes': '15',
+            'calculated_end_time': '',
         }
 
     return render_template(

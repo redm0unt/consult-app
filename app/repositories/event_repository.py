@@ -38,15 +38,21 @@ class EventRepository(BaseRepository[Event]):
     def create(
         self,
         *,
+        name: str,
         school_id: int,
         start_time: datetime,
         end_time: datetime,
+        consultations_count: int = 0,
+        consultation_duration_minutes: int = 15,
         status: EventStatus = EventStatus.scheduled,
     ) -> Event:
         event = Event(
+            name=name,
             school_id=school_id,
             start_time=start_time,
             end_time=end_time,
+            consultations_count=consultations_count,
+            consultation_duration_minutes=consultation_duration_minutes,
             status=status,
         )
         self.add(event)
@@ -57,19 +63,31 @@ class EventRepository(BaseRepository[Event]):
         self,
         event_id: int,
         *,
+        name: Optional[str] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
+        consultations_count: Optional[int] = None,
+        consultation_duration_minutes: Optional[int] = None,
     ) -> Optional[Event]:
         event = self.get_by_id(event_id)
         if not event:
             return None
 
         updated = False
+        if name is not None:
+            event.name = name
+            updated = True
         if start_time is not None:
             event.start_time = start_time
             updated = True
         if end_time is not None:
             event.end_time = end_time
+            updated = True
+        if consultations_count is not None:
+            event.consultations_count = consultations_count
+            updated = True
+        if consultation_duration_minutes is not None:
+            event.consultation_duration_minutes = consultation_duration_minutes
             updated = True
         if updated:
             self.commit()

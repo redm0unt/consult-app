@@ -73,8 +73,16 @@ class Event(Base):
     __tablename__ = 'events'
 
     event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
     start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    consultations_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0')
+    consultation_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default='15')
+    duration_minutes: Mapped[int] = mapped_column(
+        Integer,
+        Computed("TIMESTAMPDIFF(MINUTE, start_time, end_time)", persisted=False),
+        nullable=False,
+    )
     status: Mapped[EventStatus] = mapped_column(
         Enum(EventStatus),
         default=EventStatus.scheduled,
@@ -89,7 +97,10 @@ class Event(Base):
     building_bookings: Mapped[List["BuildingBooking"]] = relationship("BuildingBooking", back_populates="event")
 
     def __repr__(self):
-        return f'<Event {self.event_id}, {self.start_time}-{self.end_time} -> {self.status.value}>'
+        return (
+            f'<Event {self.event_id}, {self.name} {self.start_time}-{self.end_time} '
+            f'({self.consultations_count}x{self.consultation_duration_minutes}m) -> {self.status.value}>'
+        )
 
 class User(Base, UserMixin):
     __tablename__ = 'users'
