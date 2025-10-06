@@ -192,6 +192,7 @@ def render_admin_dashboard() -> ResponseReturnValue:
 
 
 @bp.route('/')
+@login_required
 def index() -> ResponseReturnValue:
     if current_user.is_authenticated:
         role = getattr(current_user, 'role', None)
